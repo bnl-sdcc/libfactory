@@ -188,6 +188,20 @@ class StatusInfo(object):
     # method to get the data
     # -------------------------------------------------------------------------
 
+    def getraw(self):
+        """
+        returns the structure of all raw data components
+        :rtype composed data:
+        """
+        if self.is_raw:
+            return self.data
+        else:
+            out = {}
+            for key, value in self.data.items():
+                out[key] = value.getraw()
+            return out
+
+
     def get(self, *key_l):
         """
         returns the data hosted by the Info object in the tree structure pointed 
