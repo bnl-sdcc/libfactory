@@ -37,6 +37,8 @@ class StatusInfo(object):
         self.log = logging.getLogger('autopyfactory')
         self.is_raw = is_raw
         self.is_mutable = is_mutable
+        if type(data) is not list:
+            raise IncorrectInputDataType()
         self.data = data 
         if not timestamp:
             self.timestamp = int(time.time())
@@ -326,6 +328,13 @@ class Length(AnalyzerReduce):
 # =============================================================================
 # Exceptions
 # =============================================================================
+
+class IncorrectInputDataType(Exception):
+    def __init__(self):
+        self.value = 'Type of input data is not list'
+    def __str__(self):
+        return repr(self.value)
+
 
 class IncorrectAnalyzer(Exception):
     def __init__(self, analyzer, methodname):
