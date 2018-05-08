@@ -24,6 +24,7 @@ import sys
 # =============================================================================
 
 class StatusInfo(object):
+    # FIXME !! description is needed here !!!
     """
     """
 
@@ -34,16 +35,33 @@ class StatusInfo(object):
         :param is_mutable boolean: indicates if the data can still be processed or not
         :param timestamp: the time when this object was created
         """ 
-        self.log = logging.getLogger('autopyfactory')
+        self.log = logging.getLogger('info')
+        self.log.addHandler(logging.NullHandler())
+
+        msg ='Initializing object with input options: \
+data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
+        msg.format(data=data,
+                   is_raw=is_raw,
+                   is_mutable=is_mutable,
+                   timestamp=timestamp)
+        self.log.debug(msg)
+
         self.is_raw = is_raw
         self.is_mutable = is_mutable
+
         if type(data) is not list:
+            msg = 'Input data %s is not a list. Raising exception' %data
+            self.log.error(msg)
             raise IncorrectInputDataType()
         self.data = data 
+
         if not timestamp:
-            self.timestamp = int(time.time())
-        else:
-            self.timestamp = timestamp
+            timestamp = int(time.time())
+            msg = 'Setting timestamp to %s' %timestamp
+            self.log.debug(msg)
+        self.timestamp = timestamp
+
+        self.log.debug('Object initialized')
 
     # -------------------------------------------------------------------------
     # methods to manipulate the data
@@ -56,14 +74,19 @@ class StatusInfo(object):
         :param analyzer: an Analyzer object 
         :rtype StatusInfo:
         """
+        self.log.debug('Starting')
         if analyzer.analyzertype == 'group':
             return self.group(analyzer)
-        if analyzer.analyzertype == 'filter':
+        elif analyzer.analyzertype == 'filter':
             return self.filter(analyzer)
-        if analyzer.analyzertype == 'map':
+        elif analyzer.analyzertype == 'map':
             return self.map(analyzer)
-        if analyzer.analyzertype == 'reduce':
+        elif analyzer.analyzertype == 'reduce':
             return self.reduce(analyzer)
+        else:
+            msg = 'Input object %s is not a valid analyzer. Raising exception.'
+            self.log.error(msg)
+            raise NotAnAnalyzer()
 
 
     def group(self, analyzer):
@@ -76,13 +99,21 @@ class StatusInfo(object):
         :param analyzer: an object implementing method group()
         :rtype StatusInfo:
         """
+        self.log.debug('Starting with analyzer %s' %analyzer)
+
         if not self.is_mutable:
+            msg = 'Attempting to group data for an object that is not mutable.\
+ Raising exception.'
+            self.log.error(msg)
             raise ObjectIsNotMutable('group')
 
         if not analyzer.analyzertype == 'group':
+            msg = 'Analyzer object is not type group. Raising exception.'
+            self.log.error(msg)
             raise IncorrectAnalyzer(analyzer, 'group')
 
         if self.is_raw:
+            self.log.debug('Data is raw')
             # 1
             tmp_new_data = {} 
             for item in self.data:
@@ -96,13 +127,18 @@ class StatusInfo(object):
             for k, v in tmp_new_data.items():
                 new_data[k] = StatusInfo(v, timestamp=self.timestamp)
             # 3
-            new_info = StatusInfo(new_data, is_raw=False, timestamp=self.timestamp)
+            new_info = StatusInfo(new_data, 
+                                  is_raw=False, 
+                                  timestamp=self.timestamp)
             return new_info
         else:
+            self.log.debug('Data is not raw')
             new_data = {}
             for key, statusinfo in self.data.items():
                 new_data[key] = statusinfo.group(analyzer)
-            new_info = StatusInfo(new_data, is_raw=False, timestamp=self.timestamp)
+            new_info = StatusInfo(new_data, 
+                                  is_raw=False, 
+                                  timestamp=self.timestamp)
             return new_info
 
 
@@ -113,10 +149,17 @@ class StatusInfo(object):
         :param analyzer: an object implementing method map()
         :rtype StatusInfo:
         """
+        self.log.debug('Starting with analyzer %s' %analyzer)
+
         if not self.is_mutable:
+            msg = 'Attempting to map data for an object that is not mutable.\
+ Raising exception.'
+            self.log.error(msg)
             raise ObjectIsNotMutable('map')
 
         if not analyzer.analyzertype == 'map':
+            msg = 'Analyzer object is not type map. Raising exception.'
+            self.log.error(msg)
             raise IncorrectAnalyzer(analyzer, 'map')
 
         if self.is_raw:
@@ -130,7 +173,9 @@ class StatusInfo(object):
             new_data = {}
             for key, statusinfo in self.data.items():
                 new_data[key] = statusinfo.map(analyzer)
-            new_info = StatusInfo(new_data, is_raw=False, timestamp=self.timestamp)
+            new_info = StatusInfo(new_data, 
+                                  is_raw=False, 
+                                  timestamp=self.timestamp)
             return new_info
 
 
@@ -141,10 +186,17 @@ class StatusInfo(object):
         :param analyzer: an object implementing method filter()
         :rtype StatusInfo:
         """
+        self.log.debug('Starting with analyzer %s' %analyzer)
+
         if not self.is_mutable:
+            msg = 'Attempting to filter data for an object that is not mutable.\
+ Raising exception.'
+            self.log.error(msg)
             raise ObjectIsNotMutable('filter')
 
         if not analyzer.analyzertype == 'filter':
+            msg = 'Analyzer object is not type filter. Raising exception.'
+            self.log.error(msg)
             raise IncorrectAnalyzer(analyzer, 'filter')
 
         if self.is_raw:
@@ -158,7 +210,9 @@ class StatusInfo(object):
             new_data = {}
             for key, statusinfo in self.data.items(): 
                 new_data[key] = statusinfo.filter(analyzer)
-            new_info = StatusInfo(new_data, is_raw=False, timestamp=self.timestamp)
+            new_info = StatusInfo(new_data, 
+                                  is_raw=False, 
+                                  timestamp=self.timestamp)
             return new_info
 
 
@@ -168,22 +222,34 @@ class StatusInfo(object):
         :param analyzer: an object implementing method reduce()
         :rtype : value output of reduce()
         """
+        self.log.debug('Starting with analyzer %s' %analyzer)
+
         if not self.is_mutable:
+            msg = 'Attempting to reduce data for an object that is not mutable.\
+ Raising exception.'
+            self.log.error(msg)
             raise ObjectIsNotMutable('reduce')
 
         if not analyzer.analyzertype == 'reduce':
+            msg = 'Analyzer object is not type reduce. Raising exception.'
+            self.log.error(msg)
             raise IncorrectAnalyzer(analyzer, 'reduce')
 
         if self.is_raw:
             new_data = None
             new_data = analyzer.reduce(self.data)
-            new_info = StatusInfo(new_data, is_mutable=False, timestamp=self.timestamp)
+            new_info = StatusInfo(new_data, 
+                                  is_mutable=False, 
+                                  timestamp=self.timestamp)
             return new_info
         else:
             new_data = {}
             for key, statusinfo in self.data.items(): 
                 new_data[key] = statusinfo.reduce(analyzer)
-            new_info = StatusInfo(new_data, is_raw=False, is_mutable=False, timestamp=self.timestamp)
+            new_info = StatusInfo(new_data, 
+                                  is_raw=False, 
+                                  is_mutable=False, 
+                                  timestamp=self.timestamp)
             return new_info
 
     # -------------------------------------------------------------------------
@@ -332,6 +398,12 @@ class Length(AnalyzerReduce):
 class IncorrectInputDataType(Exception):
     def __init__(self):
         self.value = 'Type of input data is not list'
+    def __str__(self):
+        return repr(self.value)
+
+class NotAnAnalyzer(Exception):
+    def __init__(self):
+        self.value = 'object does not have a valid analyzertype value'
     def __str__(self):
         return repr(self.value)
 
