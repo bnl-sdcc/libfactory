@@ -410,7 +410,7 @@ class NotAnAnalyzer(Exception):
 
 class IncorrectAnalyzer(Exception):
     def __init__(self, analyzer, methodname):
-        self.value = "object %s does not have a method % methodname" %(analzyer, methodname)
+        self.value = "object %s does not have a method %s methodname" %(analyzer, methodname)
     def __str__(self):
         return repr(self.value)
 
