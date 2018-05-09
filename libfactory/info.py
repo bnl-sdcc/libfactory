@@ -101,16 +101,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         """
         self.log.debug('Starting with analyzer %s' %analyzer)
 
-        if not self.is_mutable:
-            msg = 'Attempting to group data for an object that is not mutable.\
- Raising exception.'
-            self.log.error(msg)
-            raise ObjectIsNotMutable('group')
-
-        if not analyzer.analyzertype == 'group':
-            msg = 'Analyzer object is not type group. Raising exception.'
-            self.log.error(msg)
-            raise IncorrectAnalyzer(analyzer, 'group')
+        self.__validate_call(analyzer, 'group')
 
         if self.is_raw:
             self.log.debug('Data is raw')
@@ -151,16 +142,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         """
         self.log.debug('Starting with analyzer %s' %analyzer)
 
-        if not self.is_mutable:
-            msg = 'Attempting to map data for an object that is not mutable.\
- Raising exception.'
-            self.log.error(msg)
-            raise ObjectIsNotMutable('map')
-
-        if not analyzer.analyzertype == 'map':
-            msg = 'Analyzer object is not type map. Raising exception.'
-            self.log.error(msg)
-            raise IncorrectAnalyzer(analyzer, 'map')
+        self.__validate_call(analyzer, 'map')
 
         if self.is_raw:
             new_data = []
@@ -188,16 +170,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         """
         self.log.debug('Starting with analyzer %s' %analyzer)
 
-        if not self.is_mutable:
-            msg = 'Attempting to filter data for an object that is not mutable.\
- Raising exception.'
-            self.log.error(msg)
-            raise ObjectIsNotMutable('filter')
-
-        if not analyzer.analyzertype == 'filter':
-            msg = 'Analyzer object is not type filter. Raising exception.'
-            self.log.error(msg)
-            raise IncorrectAnalyzer(analyzer, 'filter')
+        self.__validate_call(analyzer, 'filter')
 
         if self.is_raw:
             new_data = []
@@ -224,16 +197,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         """
         self.log.debug('Starting with analyzer %s' %analyzer)
 
-        if not self.is_mutable:
-            msg = 'Attempting to reduce data for an object that is not mutable.\
- Raising exception.'
-            self.log.error(msg)
-            raise ObjectIsNotMutable('reduce')
-
-        if not analyzer.analyzertype == 'reduce':
-            msg = 'Analyzer object is not type reduce. Raising exception.'
-            self.log.error(msg)
-            raise IncorrectAnalyzer(analyzer, 'reduce')
+        self.__validate_call(analyzer, 'reduce')
 
         if self.is_raw:
             new_data = None
@@ -251,6 +215,23 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
                                   is_mutable=False, 
                                   timestamp=self.timestamp)
             return new_info
+
+
+    def __validate_call(self, analyzer, name):
+        """
+        """
+        if not self.is_mutable:
+            msg = 'Attempting to group data for an object that is not mutable.\
+ Raising exception.'
+            self.log.error(msg)
+            raise ObjectIsNotMutable(name)
+
+        if not analyzer.analyzertype == name:
+            msg = 'Analyzer object {obj} is not type {name}. Raising exception.'
+            msg = msg.format(obj = analyzer,
+                             name = name)
+            self.log.error(msg)
+            raise IncorrectAnalyzer(analyzer, name)
 
     # -------------------------------------------------------------------------
     # method to get the data
