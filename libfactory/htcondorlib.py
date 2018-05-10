@@ -88,10 +88,18 @@ class HTCondorPool(object):
         return outlist
 
 
-    def condor_submit(self, jdl_str):
+    def condor_submit(self, jdl_str, n):
         """
         :param str jdl_str: single string with the content of the submit file
+        :param int n: number of jobs to submit
         """
-        pass
-        # FIXME  To be implemented
 
+        submit_d = {}
+        for line in jdl_str.split('\n'):
+            fields = line.split('=')
+            key = fields[0].strip()
+            value = '='.join(fields[1:]).strip()
+            submit_d[key] = value
+        submit = htcondor.Submit(submit_d)
+        with self.schedd.transaction() as txn:
+            submit.queue(txn, n)
