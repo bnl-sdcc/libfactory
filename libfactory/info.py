@@ -49,7 +49,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         self.is_raw = is_raw
         self.is_mutable = is_mutable
 
-        if type(data) is not list:
+        if is_raw and is_mutable and type(data) is not list:
             msg = 'Input data %s is not a list. Raising exception' %data
             self.log.error(msg)
             raise IncorrectInputDataType()
@@ -352,7 +352,7 @@ class GroupByKeyRemap(AnalyzerGroup):
 
     def group(self, job):
         try:
-            value = job[self.key]
+            value = str(job[self.key])
         except Exception, ex:
             return None
 
