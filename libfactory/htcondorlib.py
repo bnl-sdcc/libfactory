@@ -90,16 +90,42 @@ class HTCondorPool(object):
 
     def condor_submit(self, jdl_str, n):
         """
+        performs job submission from a string representation 
+        of the submit file. The string containing the submit file should not
+        contain the "queue" statement, as the number of jobs is being passed
+        as a separate argument.
         :param str jdl_str: single string with the content of the submit file
         :param int n: number of jobs to submit
         """
-
         submit_d = {}
         for line in jdl_str.split('\n'):
-            fields = line.split('=')
-            key = fields[0].strip()
-            value = '='.join(fields[1:]).strip()
-            submit_d[key] = value
+            try:
+                fields = line.split('=')
+                key = fields[0].strip()
+                value = '='.join(fields[1:]).strip()
+                submit_d[key] = value
+            except Exception, ex:
+                if line.startswith('queue '):
+                    # the "queue" statement should not be part of the 
+                    # submit file string, but it is harmless 
+                    pass
+                else:
+                    raise MalformedSubmitFile(line)
+
         submit = htcondor.Submit(submit_d)
         with self.schedd.transaction() as txn:
             submit.queue(txn, n)
+
+
+# =============================================================================
+#   Exceptions
+# =============================================================================
+
+class MalformedSubmitFile(Exception):
+    def __init__(self, line):
+        self.value = 'line %s in submit file does not have the right format'
+    def __str__(self):
+        return repr(self.value)
+
+
+
