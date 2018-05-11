@@ -52,7 +52,11 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         if is_raw and is_mutable and type(data) is not list:
             msg = 'Input data %s is not a list. Raising exception' %data
             self.log.error(msg)
-            raise IncorrectInputDataType()
+            raise IncorrectInputDataType(list)
+        if not is_raw and type(data) is not dict:
+            msg = 'Input data %s is not a dict. Raising exception' %data
+            self.log.error(msg)
+            raise IncorrectInputDataType(dict)
         self.data = data 
 
         if not timestamp:
@@ -377,8 +381,8 @@ class Length(AnalyzerReduce):
 # =============================================================================
 
 class IncorrectInputDataType(Exception):
-    def __init__(self):
-        self.value = 'Type of input data is not list'
+    def __init__(self, type):
+        self.value = 'Type of input data is not %s' %type
     def __str__(self):
         return repr(self.value)
 
