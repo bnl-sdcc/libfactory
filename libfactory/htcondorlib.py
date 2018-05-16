@@ -61,7 +61,7 @@ class HTCondorPool(object):
         :param list constraint_l: list of constraints strings in the history query
         """
         if constraint_l:
-            constraint_str = " && ".join(constraints)
+            constraint_str = " && ".join(constraint_l)
         else:
             constraint_str = "true"
         out = self.schedd.history(constraint_str, attribute_l, 0)
