@@ -38,35 +38,34 @@ class HTCondorPool(object):
 
     # -------------------------------------------------------------------------
 
-    def condor_q(self, attribute_l):
+    def condor_q(self, attribute_l, constraint_l=None):
         '''
         Returns a list of ClassAd objects. 
         :param list attribute_l: list of classads strings to include in the query 
+        :param list constraint_l: list of constraints strings in the query
         '''
-        out = self.schedd.query('true', attribute_l)
+        constraint_str = self._build_constraint_str(constraint_l)
+        out = self.schedd.query(constraint_str, attribute_l)
         out = list(out)
         return out
 
-    
-    def condor_rm(self, jobid_l):
-        """
-        :param list jobid_l: list of strings "ClusterId.ProcId"
-        """
-        self.schedd.act(htcondor.JobAction.Remove, jobid_l)
-    
     
     def condor_history(self, attribute_l, constraint_l=None):
         """
         :param list attribute_l: list of classads strings to include in the query 
         :param list constraint_l: list of constraints strings in the history query
         """
-        if constraint_l:
-            constraint_str = " && ".join(constraint_l)
-        else:
-            constraint_str = "true"
+        constraint_str = self._build_constraint_str(constraint_l)
         out = self.schedd.history(constraint_str, attribute_l, 0)
         out = list(out)
         return out
+
+
+    def condor_rm(self, jobid_l):
+        """
+        :param list jobid_l: list of strings "ClusterId.ProcId"
+        """
+        self.schedd.act(htcondor.JobAction.Remove, jobid_l)
     
     
     def condor_status(self, attribute_l):
@@ -116,6 +115,15 @@ class HTCondorPool(object):
         with self.schedd.transaction() as txn:
             submit.queue(txn, n)
 
+
+    def _build_constraint_str(self, constraint_l=None):
+        """
+        """
+        if constraint_l:
+            constraint_str = " && ".join(constraint_l)
+        else:
+            constraint_str = "true"
+        return constraint_str
 
 # =============================================================================
 #   Exceptions
