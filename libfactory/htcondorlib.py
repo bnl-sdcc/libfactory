@@ -3,8 +3,11 @@
 __author__ = "Jose Caballero"
 __email__ = "jcaballero@bnl.gov"
 
-import htcondor
+import logging
+import logging.handlers
+
 import classad
+import htcondor
 
 
 class HTCondorPool(object):
@@ -14,26 +17,38 @@ class HTCondorPool(object):
         :param string remotecollector: hostname of the collector
         :param string remoteschedd: hostname of the schedd
         """
+        self.log = logging.getLogger('htcondorpool')
+        self.log.addHandler(logging.NullHandler())
+
         self.remotecollector = remotecollector
         self.remoteschedd = remoteschedd
         self.collector = self.getcollector()
         self.schedd = self.getschedd()
 
+        self.log.debug('HTCondorPool object initialized')
+
 
     def getcollector(self):
+        self.log.debug('starting')
         if self.remotecollector:
             collector = htcondor.Collector(self.remotecollector)
+            self.log.debug('got remote collector')
         else:
             collector = htcondor.Collector()
+            self.log.debug('got local collector')
         return collector
 
 
     def getschedd(self):
+        self.log.debug('starting')
         if self.remotecollector:
             scheddAd = self.collector.locate(htcondor.DaemonTypes.Schedd, self.remoteschedd)
             schedd = htcondor.Schedd(scheddAd) 
+            self.log.debug('got remote schedd')
         else:
             schedd = htcondor.Schedd() # Defaults to the local schedd.
+            self.log.debug('got local schedd')
+        else:
         return schedd
 
     # -------------------------------------------------------------------------
@@ -44,15 +59,20 @@ class HTCondorPool(object):
         :param list attribute_l: list of classads strings to include in the query 
         :param list constraint_l: list of constraints strings in the query
         '''
+        self.log.debug('starting')
         if type(attribute_l) is not list:
             raise IncorrectInputType("attribute_l", list)
         if constraint_l is not None and\
            type(constraint_l) is not list:
             raise IncorrectInputType("constraint_l", list)
 
+        self.log.debug('list of attributes in the query = %s' %attribute_l)
+        self.log.debug('list of constraints in the query = %s' %constraint_l)
+
         constraint_str = self._build_constraint_str(constraint_l)
         out = self.schedd.query(constraint_str, attribute_l)
         out = list(out)
+        self.log.debug('out = %s' %out)
         return out
 
     
@@ -61,15 +81,20 @@ class HTCondorPool(object):
         :param list attribute_l: list of classads strings to include in the query 
         :param list constraint_l: list of constraints strings in the history query
         """
+        self.log.debug('starting')
         if type(attribute_l) is not list:
             raise IncorrectInputType("attribute_l", list)
         if constraint_l is not None and\
            type(constraint_l) is not list:
             raise IncorrectInputType("constraint_l", list)
 
+        self.log.debug('list of attributes in the query = %s' %attribute_l)
+        self.log.debug('list of constraints in the query = %s' %constraint_l)
+
         constraint_str = self._build_constraint_str(constraint_l)
         out = self.schedd.history(constraint_str, attribute_l, 0)
         out = list(out)
+        self.log.debug('out = %s' %out)
         return out
 
 
@@ -77,7 +102,10 @@ class HTCondorPool(object):
         """
         :param list jobid_l: list of strings "ClusterId.ProcId"
         """
+        self.log.debug('starting')
+        self.log.debug('list of jobs to kill = %s' %jobid_l)
         self.schedd.act(htcondor.JobAction.Remove, jobid_l)
+        self.log.debug('finished')
     
     
     def condor_status(self, attribute_l, constraint_l=None):
@@ -91,16 +119,21 @@ class HTCondorPool(object):
           [ Name = "slot2@mysite.net"; Activity = "Idle"; MyType = "Machine"; TargetType = "Job"; State = "Unclaimed"; CurrentTime = time() ]
          ]
         :param list attribute_l: list of classads strings to include in the query 
+        :param list constraint_l: list of constraints strings in the status query
         """
+        self.log.debug('starting')
         if type(attribute_l) is not list:
             raise IncorrectInputType("attribute_l", list)
         if constraint_l is not None and\
            type(constraint_l) is not list:
             raise IncorrectInputType("constraint_l", list)
 
+        self.log.debug('list of attributes in the query = %s' %attribute_l)
+        self.log.debug('list of constraints in the query = %s' %constraint_l)
         constraint_str = self._build_constraint_str(constraint_l)
-        outlist = self.collector.query(htcondor.AdTypes.Startd, constraint_str, attribute_l)
-        return outlist
+        out = self.collector.query(htcondor.AdTypes.Startd, constraint_str, attribute_l)
+        self.log.debug('out = %s' %out)
+        return out
 
 
     def condor_submit(self, jdl_str, n):
@@ -112,6 +145,7 @@ class HTCondorPool(object):
         :param str jdl_str: single string with the content of the submit file
         :param int n: number of jobs to submit
         """
+        self.log.debug('starting')
         submit_d = {}
         for line in jdl_str.split('\n'):
             try:
@@ -126,15 +160,18 @@ class HTCondorPool(object):
                     pass
                 else:
                     raise MalformedSubmitFile(line)
-
+        self.log.debug('dictionary for submission = %s' %submit_d)
+        
         submit = htcondor.Submit(submit_d)
         with self.schedd.transaction() as txn:
             submit.queue(txn, n)
+        self.log.debug('finished')
 
 
     def _build_constraint_str(self, constraint_l=None):
         """
         """
+        self.log.debug('starting')
         if constraint_l:
             constraint_str = " && ".join(constraint_l)
         else:
