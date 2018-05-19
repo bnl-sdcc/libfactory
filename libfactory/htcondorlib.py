@@ -44,6 +44,12 @@ class HTCondorPool(object):
         :param list attribute_l: list of classads strings to include in the query 
         :param list constraint_l: list of constraints strings in the query
         '''
+        if type(attribute_l) is not list:
+            raise IncorrectInputType("attribute_l", list)
+        if constraint_l is not None and\
+           type(constraint_l) is not list:
+            raise IncorrectInputType("constraint_l", list)
+
         constraint_str = self._build_constraint_str(constraint_l)
         out = self.schedd.query(constraint_str, attribute_l)
         out = list(out)
@@ -55,6 +61,12 @@ class HTCondorPool(object):
         :param list attribute_l: list of classads strings to include in the query 
         :param list constraint_l: list of constraints strings in the history query
         """
+        if type(attribute_l) is not list:
+            raise IncorrectInputType("attribute_l", list)
+        if constraint_l is not None and\
+           type(constraint_l) is not list:
+            raise IncorrectInputType("constraint_l", list)
+
         constraint_str = self._build_constraint_str(constraint_l)
         out = self.schedd.history(constraint_str, attribute_l, 0)
         out = list(out)
@@ -68,7 +80,7 @@ class HTCondorPool(object):
         self.schedd.act(htcondor.JobAction.Remove, jobid_l)
     
     
-    def condor_status(self, attribute_l):
+    def condor_status(self, attribute_l, constraint_l=None):
         """ 
         Equivalent to condor_status
         We query for a few specific ClassAd attributes 
@@ -80,10 +92,14 @@ class HTCondorPool(object):
          ]
         :param list attribute_l: list of classads strings to include in the query 
         """
-        # We only want to try to import if we are actually using the call...
-        # Later on we will need to handle Condor version >7.9.4 and <7.9.4
-        #
-        outlist = self.collector.query(htcondor.AdTypes.Startd, 'true', attribute_l)
+        if type(attribute_l) is not list:
+            raise IncorrectInputType("attribute_l", list)
+        if constraint_l is not None and\
+           type(constraint_l) is not list:
+            raise IncorrectInputType("constraint_l", list)
+
+        constraint_str = self._build_constraint_str(constraint_l)
+        outlist = self.collector.query(htcondor.AdTypes.Startd, constraint_str, attribute_l)
         return outlist
 
 
@@ -135,5 +151,10 @@ class MalformedSubmitFile(Exception):
     def __str__(self):
         return repr(self.value)
 
+class IncorrectInputType(Exception):
+    def __init__(self, name, type):
+        self.value = 'Input option %s is not type %s' %(name, type)
+    def __str__(self):
+        return repr(self.value)
 
 
