@@ -48,7 +48,6 @@ class HTCondorPool(object):
         else:
             schedd = htcondor.Schedd() # Defaults to the local schedd.
             self.log.debug('got local schedd')
-        else:
         return schedd
 
     # -------------------------------------------------------------------------
