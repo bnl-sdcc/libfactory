@@ -36,6 +36,7 @@ class HTCondorPool(object):
         else:
             collector = htcondor.Collector()
             self.log.debug('got local collector')
+        self.__validate_collector(collector)
         return collector
 
 
@@ -48,7 +49,30 @@ class HTCondorPool(object):
         else:
             schedd = htcondor.Schedd() # Defaults to the local schedd.
             self.log.debug('got local schedd')
+        self.__validate_schedd(schedd)
         return schedd
+
+
+    def __validate_collector(self, collector):
+        """
+        checks if the collector is reachable
+        """
+        try:
+            # should return an empty list if Collector exists
+            collector.query(constraint="False") 
+        except Exception, ex:
+            raise CollectorNotReachable()
+    
+
+    def __validate_schedd(self, schedd):
+        """
+        checks if the schedd is reachable
+        """
+        try:
+            # should return an "empty" iterator if Schedd exists
+            schedd.xquery(limit = 0)
+        except Exception, ex:
+            raise ScheddNotReachable()
 
     # -------------------------------------------------------------------------
 
@@ -180,6 +204,21 @@ class HTCondorPool(object):
 # =============================================================================
 #   Exceptions
 # =============================================================================
+
+class CollectorNotReachable(Exception):
+    def __init__(self):
+        self.value = "Collector not reachable"
+    def __str__(self):
+        return repr(self.value)
+
+
+class ScheddNotReachable(Exception):
+    def __init__(self):
+        self.value = "Schedd not reachable"
+    def __str__(self):
+        return repr(self.value)
+
+
 
 class MalformedSubmitFile(Exception):
     def __init__(self, line):
