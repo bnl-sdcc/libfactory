@@ -171,6 +171,8 @@ class HTCondorPool(object):
         self.log.debug('starting')
         submit_d = {}
         for line in jdl_str.split('\n'):
+            if line.strip() == '':
+                continue
             try:
                 fields = line.split('=')
                 key = fields[0].strip()
@@ -184,6 +186,8 @@ class HTCondorPool(object):
                 else:
                     raise MalformedSubmitFile(line)
         self.log.debug('dictionary for submission = %s' %submit_d)
+        if not bool(submit_d):
+            raise EmptySubmitFile()
         
         submit = htcondor.Submit(submit_d)
         with self.schedd.transaction() as txn:
@@ -211,14 +215,17 @@ class CollectorNotReachable(Exception):
     def __str__(self):
         return repr(self.value)
 
-
 class ScheddNotReachable(Exception):
     def __init__(self):
         self.value = "Schedd not reachable"
     def __str__(self):
         return repr(self.value)
 
-
+class EmptySubmitFile(Exception):
+    def __init__(self):
+        self.value = "submit file is emtpy"
+    def __str__(self):
+        return repr(self.value)
 
 class MalformedSubmitFile(Exception):
     def __init__(self, line):
