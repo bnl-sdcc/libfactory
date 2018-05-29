@@ -36,7 +36,7 @@ class HTCondorPool(object):
         else:
             collector = htcondor.Collector()
             self.log.debug('got local collector')
-        self.__validate_collector(collector)
+        #self.__validate_collector(collector)
         return collector
 
 
@@ -49,7 +49,7 @@ class HTCondorPool(object):
         else:
             schedd = htcondor.Schedd() # Defaults to the local schedd.
             self.log.debug('got local schedd')
-        self.__validate_schedd(schedd)
+        #self.__validate_schedd(schedd)
         return schedd
 
 
