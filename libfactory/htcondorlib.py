@@ -12,46 +12,31 @@ import htcondor
 
 class HTCondorPool(object):
 
-    def __init__(self, remotecollector=None, remoteschedd=None):
+    def __init__(self, localcollector=True, remotecollector=None):
         """
         :param string remotecollector: hostname of the collector
-        :param string remoteschedd: hostname of the schedd
         """
         self.log = logging.getLogger('htcondorpool')
         self.log.addHandler(logging.NullHandler())
-
+        self.localcollector = localcollector
         self.remotecollector = remotecollector
-        self.remoteschedd = remoteschedd
         self.collector = self.getcollector()
-        self.schedd = self.getschedd()
-
         self.log.debug('HTCondorPool object initialized')
 
 
     def getcollector(self):
         self.log.debug('starting')
-        if self.remotecollector:
-            collector = htcondor.Collector(self.remotecollector)
-            self.log.debug('got remote collector')
-        else:
+        if self.localcollector:
             collector = htcondor.Collector()
             self.log.debug('got local collector')
+        else:
+            if self.remotecollector:
+                collector = htcondor.Collector(self.remotecollector)
+                self.log.debug('got remote collector')
+            else:
+                collector = None
         #self.__validate_collector(collector)
         return collector
-
-
-    def getschedd(self):
-        self.log.debug('starting')
-        if self.remotecollector:
-            scheddAd = self.collector.locate(htcondor.DaemonTypes.Schedd, self.remoteschedd)
-            schedd = htcondor.Schedd(scheddAd) 
-            self.log.debug('got remote schedd')
-        else:
-            schedd = htcondor.Schedd() # Defaults to the local schedd.
-            self.log.debug('got local schedd')
-        #self.__validate_schedd(schedd)
-        return schedd
-
 
     def __validate_collector(self, collector):
         """
@@ -62,6 +47,37 @@ class HTCondorPool(object):
             collector.query(constraint="False") 
         except Exception, ex:
             raise CollectorNotReachable()
+
+
+class HTCondorSchedd(object):
+
+    def __init__(self, remoteschedd=None, pool=None):
+        """
+        :param string remoteschedd: hostname of the schedd when it is not local
+        """
+        self.log = logging.getLogger('htcondorschedd')
+        self.log.addHandler(logging.NullHandler())
+        self.remoteschedd = remoteschedd
+        self.pool = pool
+        self.schedd = self.getschedd()
+        self.log.debug('HTCondorSchedd object initialized')
+
+
+    def getschedd(self):
+        self.log.debug('starting')
+        if not self.remoteschedd: 
+            schedd = htcondor.Schedd() # Defaults to the local schedd.
+            self.log.debug('got local schedd')
+        else:
+            if self.pool:
+                scheddAd = self.pool.collector.locate(htcondor.DaemonTypes.Schedd, self.remoteschedd)
+                schedd = htcondor.Schedd(scheddAd) 
+                self.log.debug('got remote schedd')
+            else:
+                pass
+                #FIXME raise Exception ???
+        #self.__validate_schedd(schedd)
+        return schedd
     
 
     def __validate_schedd(self, schedd):
