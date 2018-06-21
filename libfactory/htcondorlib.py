@@ -110,7 +110,6 @@ class HTCondorSchedd(object):
 
         constraint_str = self._build_constraint_str(constraint_l)
         out = self.schedd.query(constraint_str, attribute_l)
-        out = list(out)
         self.log.debug('out = %s' %out)
         return out
 
