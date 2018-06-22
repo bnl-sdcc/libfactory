@@ -1,0 +1,4 @@
+include CHANGELOG LICENSE README
+include scripts/*
+include etc/*
+recursive-include libfactory *.py *.pyc *.pyo
