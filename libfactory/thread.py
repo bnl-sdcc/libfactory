@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 
 __author__ = "Jose Caballero"
 __email__ = "jcaballero@bnl.gov"
