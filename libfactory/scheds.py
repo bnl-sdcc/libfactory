@@ -7,27 +7,26 @@ import logging
 import logging.handlers
 
 
-class schedulers(self):
+class schedulermanager(self):
     '''
-    container class for multiple sched plugins
-    conected to each others in a chain
+    container class for multiple scheduler plugins
+    conected to each others in a sequence 
     '''
 
     def __init__(self):
         self.log = logging.getLogger('schedulers')
         self.log.addHandler(logging.NullHandler())
-        self.sched_l = []
-        self.output = 0
+        self.scheduler_l = []
         self.log.debug('object initialized')
 
 
-    def add(self, sched):
+    def add(self, scheduler):
         '''
         adds a new sched plugin to the list
-        :param sched plugin:
+        :param scheduler plugin:
         '''
-        self.log.debug('adding sched plugin %s' %sched)
-        self.sched_l.append(sched)
+        self.log.debug('adding scheduler plugin %s' %scheduler)
+        self.scheduler_l.append(scheduler)
 
 
     def calculate(self, n=0):
@@ -35,23 +34,14 @@ class schedulers(self):
         calculates a number calling all sched plugins in a chain
         :param n: initial value for the first sched plugin
         '''
-        self.log.debug('start with n=%s' %n)
-        tmp_output = n
+        self.log.debug('start with input %s' %n)
         try:
-            for sched in self.sched_l:
-                tmp_output = sched.calculate(tmp_output)
+            for scheduler in self.scheduler_l:
+                n = scheduler.calculate(n)
         except Exception, ex:
             self.log.debug('an exception has been caught: %s. Aborting.' %ex)
             raise ex
         else:
-            self.output = tmp_output
-            self.log.error('final output is %s' %self.output)
-
-
-    def get(self):
-        '''
-        returns the result of calculations
-        '''
-        return self.output
-
+            self.log.error('final output is %s' %n)
+            return n
 
