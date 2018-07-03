@@ -87,6 +87,8 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
             return self.map(analyzer)
         elif analyzer.analyzertype == 'reduce':
             return self.reduce(analyzer)
+        elif analyzer.analyzertype == 'process':
+            return self.process(analyzer)
         else:
             msg = 'Input object %s is not a valid analyzer. Raising exception.'
             self.log.error(msg)
@@ -193,19 +195,48 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
             return new_info
 
 
-    def reduce(self, analyzer):
+    def reduce(self, analyzer, value=None):
         """
-        process the entire self.data at the raw level
+        process the entire self.data at the raw level and accumulate values
         :param analyzer: an object implementing method reduce()
-        :rtype : value output of reduce()
+        :rtype StatusInfo: 
         """
         self.log.debug('Starting with analyzer %s' %analyzer)
 
-        self.__validate_call(analyzer, 'reduce')
+        self.__validate_call(analyzer, 'process')
+
+        
+        if self.is_raw:
+            for item in self.data:
+                value = analyzer.reduce(value, item) 
+            new_info = StatusInfo(value, 
+                                  is_mutable=False, 
+                                  timestamp=self.timestamp)
+            return new_info
+        else:
+            new_data = {}
+            for key, statusinfo in self.data.items(): 
+                new_data[key] = statusinfo.process(analyzer)
+            new_info = StatusInfo(new_data, 
+                                  is_raw=False, 
+                                  is_mutable=False, 
+                                  timestamp=self.timestamp)
+            return new_info
+
+
+    def process(self, analyzer):
+        """
+        process the entire self.data at the raw level
+        :param analyzer: an object implementing method process()
+        :rtype StatusInfo: 
+        """
+        self.log.debug('Starting with analyzer %s' %analyzer)
+
+        self.__validate_call(analyzer, 'process')
 
         if self.is_raw:
             new_data = None
-            new_data = analyzer.reduce(self.data)
+            new_data = analyzer.process(self.data)
             new_info = StatusInfo(new_data, 
                                   is_mutable=False, 
                                   timestamp=self.timestamp)
@@ -213,7 +244,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         else:
             new_data = {}
             for key, statusinfo in self.data.items(): 
-                new_data[key] = statusinfo.reduce(analyzer)
+                new_data[key] = statusinfo.process(analyzer)
             new_info = StatusInfo(new_data, 
                                   is_raw=False, 
                                   is_mutable=False, 
@@ -313,6 +344,11 @@ class AnalyzerReduce(Analyzer):
     def reduce(self):
         raise NotImplementedError
 
+class AnalyzerProcess(Analyzer):
+    analyzertype = "process"
+    def process(self):
+        raise NotImplementedError
+
 
 class Algorithm(object):
     """
@@ -366,14 +402,26 @@ class GroupByKeyRemap(AnalyzerGroup):
             return None
 
 
-class Length(AnalyzerReduce):
+class Count(AnalyzerProcess):
 
     def __init__(self):
         pass
 
-    def reduce(self, data):
+    def process(self, data):
         return len(data)
 
+
+class TotalRunningTime(AnalyzerReduce):
+
+    def __init__(self):
+        self.now = int(time.time())
+
+    def reduce(self, value, job):
+        running = self.now - int(job['enteredcurrentstatus'])
+        if value:
+            return value + running
+        else:
+            return running
 
 
 # =============================================================================
