@@ -203,7 +203,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         """
         self.log.debug('Starting with analyzer %s' %analyzer)
 
-        self.__validate_call(analyzer, 'process')
+        self.__validate_call(analyzer, 'reduce')
 
         
         if self.is_raw:
