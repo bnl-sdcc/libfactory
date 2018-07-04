@@ -260,7 +260,6 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
  Raising exception.'
             self.log.error(msg)
             raise ObjectIsNotMutable(name)
-
         if not analyzer.analyzertype == name:
             msg = 'Analyzer object {obj} is not type {name}. Raising exception.'
             msg = msg.format(obj = analyzer,
@@ -315,6 +314,29 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         if key not in self.data.keys():
             raise MissingKey(key)
         return self.data[key]
+
+
+# =============================================================================
+#  Decorators 
+# =============================================================================
+
+def validate_call(method):
+    def wrapper(self, analyzer, **kw):
+        method_name = method.__name__
+        if not self.is_mutable:
+            msg = 'Attempting to manipulate data for an object that is not mutable.'
+            msg += 'Raising exception.'
+            self.log.error(msg)
+            raise ObjectIsNotMutable(name)
+        if not analyzer.analyzertype == method_name:
+            msg = 'Analyzer object {obj} is not type {name}. Raising exception.'
+            msg = msg.format(obj = analyzer,
+                             name = name)
+            self.log.error(msg)
+            raise IncorrectAnalyzer(analyzer, name)
+        out = method(self, analyzer, **kw)
+        return out
+    return wrapper
 
 
 # =============================================================================
