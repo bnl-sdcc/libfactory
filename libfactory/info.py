@@ -18,6 +18,33 @@ import os
 import pwd
 import sys
 
+# =============================================================================
+#  Decorators 
+#
+#   Note:
+#   the decorator must be implemented before the class StatusInfo,
+#   otherwise, it does not find it
+# =============================================================================
+
+def validate_call(method):
+    def wrapper(self, analyzer, *k, **kw):
+        method_name = method.__name__
+        analyzertype = analyzer.analyzertype
+        if not self.is_mutable:
+            msg = 'Attempting to manipulate data for an object that is not mutable.'
+            msg += 'Raising exception.'
+            self.log.error(msg)
+            raise ObjectIsNotMutable(name)
+        if not analyzertype == method_name:
+            msg = 'Analyzer object {obj} is not type {name}. Raising exception.'
+            msg = msg.format(obj = analyzer,
+                             name = method_name)
+            self.log.error(msg)
+            raise IncorrectAnalyzer(analyzer, analyzertype, method_name)
+        out = method(self, analyzer, *k, **kw)
+        return out
+    return wrapper
+
 
 # =============================================================================
 # Info class
@@ -316,27 +343,6 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         return self.data[key]
 
 
-# =============================================================================
-#  Decorators 
-# =============================================================================
-
-def validate_call(method):
-    def wrapper(self, analyzer, **kw):
-        method_name = method.__name__
-        if not self.is_mutable:
-            msg = 'Attempting to manipulate data for an object that is not mutable.'
-            msg += 'Raising exception.'
-            self.log.error(msg)
-            raise ObjectIsNotMutable(name)
-        if not analyzer.analyzertype == method_name:
-            msg = 'Analyzer object {obj} is not type {name}. Raising exception.'
-            msg = msg.format(obj = analyzer,
-                             name = name)
-            self.log.error(msg)
-            raise IncorrectAnalyzer(analyzer, name)
-        out = method(self, analyzer, **kw)
-        return out
-    return wrapper
 
 
 # =============================================================================
@@ -464,8 +470,11 @@ class NotAnAnalyzer(Exception):
 
 
 class IncorrectAnalyzer(Exception):
-    def __init__(self, analyzer, analyzertype):
-        self.value = "Analyzer object %s is not type %s" %(analyzer, analyzertype)
+    def __init__(self, analyzer, analyzertype, methodname):
+        value = "Analyzer object {ana} is of type '{atype}' but used for '{call}()'" 
+        self.value = value.format(ana=analyzer, 
+                                  atype=analyzertype, 
+                                  call=methodname)
     def __str__(self):
         return repr(self.value)
 
