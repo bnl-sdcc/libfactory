@@ -216,7 +216,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         else:
             new_data = {}
             for key, statusinfo in self.data.items(): 
-                new_data[key] = statusinfo.process(analyzer)
+                new_data[key] = statusinfo.reduce(analyzer, value)
             new_info = StatusInfo(new_data, 
                                   is_raw=False, 
                                   is_mutable=False, 
