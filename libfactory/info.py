@@ -122,6 +122,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
             raise NotAnAnalyzer()
 
 
+    @validate_call
     def group(self, analyzer):
         """
         groups the items recorded in self.data into a dictionary
@@ -133,8 +134,6 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         :rtype StatusInfo:
         """
         self.log.debug('Starting with analyzer %s' %analyzer)
-
-        self.__validate_call(analyzer, 'group')
 
         if self.is_raw:
             self.log.debug('Data is raw')
@@ -166,6 +165,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
             return new_info
 
 
+    @validate_call
     def map(self, analyzer):
         """
         modifies each item in self.data according to rules
@@ -174,8 +174,6 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         :rtype StatusInfo:
         """
         self.log.debug('Starting with analyzer %s' %analyzer)
-
-        self.__validate_call(analyzer, 'map')
 
         if self.is_raw:
             new_data = []
@@ -194,6 +192,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
             return new_info
 
 
+    @validate_call
     def filter(self, analyzer):
         """
         eliminates the items in self.data that do not pass
@@ -202,8 +201,6 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         :rtype StatusInfo:
         """
         self.log.debug('Starting with analyzer %s' %analyzer)
-
-        self.__validate_call(analyzer, 'filter')
 
         if self.is_raw:
             new_data = []
@@ -222,6 +219,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
             return new_info
 
 
+    @validate_call
     def reduce(self, analyzer, value=None):
         """
         process the entire self.data at the raw level and accumulate values
@@ -229,9 +227,6 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         :rtype StatusInfo: 
         """
         self.log.debug('Starting with analyzer %s' %analyzer)
-
-        self.__validate_call(analyzer, 'reduce')
-
         
         if self.is_raw:
             for item in self.data:
@@ -251,6 +246,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
             return new_info
 
 
+    @validate_call
     def process(self, analyzer):
         """
         process the entire self.data at the raw level
@@ -258,8 +254,6 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         :rtype StatusInfo: 
         """
         self.log.debug('Starting with analyzer %s' %analyzer)
-
-        self.__validate_call(analyzer, 'process')
 
         if self.is_raw:
             new_data = None
@@ -278,21 +272,6 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
                                   timestamp=self.timestamp)
             return new_info
 
-
-    def __validate_call(self, analyzer, name):
-        """
-        """
-        if not self.is_mutable:
-            msg = 'Attempting to group data for an object that is not mutable.\
- Raising exception.'
-            self.log.error(msg)
-            raise ObjectIsNotMutable(name)
-        if not analyzer.analyzertype == name:
-            msg = 'Analyzer object {obj} is not type {name}. Raising exception.'
-            msg = msg.format(obj = analyzer,
-                             name = name)
-            self.log.error(msg)
-            raise IncorrectAnalyzer(analyzer, name)
 
     # -------------------------------------------------------------------------
     # method to get the data
@@ -430,6 +409,23 @@ class GroupByKeyRemap(AnalyzerGroup):
             return None
 
 
+class AttributeValue(AnalyzerFilter):
+
+    def __init__(self, attribute, value):
+        self.attribute = attribute 
+        self.value = value
+
+    def filter (self, job):
+        if self.attribute not in job.keys():
+            msg = 'job {job} does not have key {key}.'
+            msg = msg.format(job=job, 
+                             key=self.attribute)
+            logmsg = msg + ' Raising Exception.'
+            self.log.error(logmsg)
+            raise AnalyzerFailure(msg)
+        return job[self.attribute] == self.value
+
+
 class Count(AnalyzerProcess):
 
     def __init__(self):
@@ -461,6 +457,7 @@ class IncorrectInputDataType(Exception):
         self.value = 'Type of input data is not %s' %type
     def __str__(self):
         return repr(self.value)
+
 
 class NotAnAnalyzer(Exception):
     def __init__(self):
@@ -496,6 +493,16 @@ class IsRawData(Exception):
 class ObjectIsNotMutable(Exception):
     def __init__(self, method):
         self.value = "object is not mutable, method %s can not be invoked anymore" %method
+    def __str__(self):
+        return repr(self.value)
+
+
+class AnalyzerFailure(Exception):
+    """
+    generic Exception for any unclassified failure
+    """
+    def __init__(self, value):
+        self.value = value
     def __str__(self):
         return repr(self.value)
 
