@@ -106,8 +106,8 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         :rtype StatusInfo:
         """
         self.log.debug('Starting')
-        if analyzer.analyzertype == 'group':
-            return self.group(analyzer)
+        if analyzer.analyzertype == 'indexby':
+            return self.indexby(analyzer)
         elif analyzer.analyzertype == 'filter':
             return self.filter(analyzer)
         elif analyzer.analyzertype == 'map':
@@ -123,14 +123,14 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
 
 
     @validate_call
-    def group(self, analyzer):
+    def indexby(self, analyzer):
         """
         groups the items recorded in self.data into a dictionary
         and creates a new StatusInfo object with it. 
            1. make a dictinary grouping items according to rules in analyzer
            2. convert that dictionary into a dictionary of StatusInfo objects
            3. make a new StatusInfo with that dictionary
-        :param analyzer: an object implementing method group()
+        :param analyzer: an object implementing method indexby()
         :rtype StatusInfo:
         """
         self.log.debug('Starting with analyzer %s' %analyzer)
@@ -140,7 +140,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
             # 1
             tmp_new_data = {} 
             for item in self.data:
-                key = analyzer.group(item)
+                key = analyzer.indexby(item)
                 if key:
                     if key not in tmp_new_data.keys():
                         tmp_new_data[key] = []
@@ -158,7 +158,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
             self.log.debug('Data is not raw')
             new_data = {}
             for key, statusinfo in self.data.items():
-                new_data[key] = statusinfo.group(analyzer)
+                new_data[key] = statusinfo.indexby(analyzer)
             new_info = StatusInfo(new_data, 
                                   is_raw=False, 
                                   timestamp=self.timestamp)
@@ -332,8 +332,8 @@ class Analyzer(object):
     pass
 
 class AnalyzerGroup(Analyzer):
-    analyzertype = "group"
-    def group(self):
+    analyzertype = "indexby"
+    def indexby(self):
         raise NotImplementedError
 
 class AnalyzerFilter(Analyzer):
@@ -384,7 +384,7 @@ class GroupByKey(AnalyzerGroup):
     def __init__(self, key):
         self.key = key
 
-    def group(self, job):
+    def indexby(self, job):
         try:
             return job[self.key]
         except Exception, ex:
@@ -397,7 +397,7 @@ class GroupByKeyRemap(AnalyzerGroup):
         self.key = key
         self.mapping_d = mapping_d
 
-    def group(self, job):
+    def indexby(self, job):
         try:
             value = str(job[self.key])
         except Exception, ex:
