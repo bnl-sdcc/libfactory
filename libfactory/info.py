@@ -415,7 +415,7 @@ class AttributeValue(AnalyzerFilter):
         self.attribute = attribute 
         self.value = value
 
-    def filter (self, job):
+    def filter(self, job):
         if self.attribute not in job.keys():
             msg = 'job {job} does not have key {key}.'
             msg = msg.format(job=job, 
