@@ -22,10 +22,10 @@ This allows to perform different manipulations from the same source object.
 
 There are two types of methods in class StatusInfo:
 
-    - methods which returned StatusInfo instance accepts further processing.
+    - methods whose returned StatusInfo instance accepts further processing.
       Examples are methods indexby(), filter(), and map().
 
-    - methods which returned StatusInfo instance can not be processed.
+    - methods whose returned StatusInfo instance can not be processed anymore.
       An attempt to call any method on a StatusInfo instance of this type 
       will raise an ObjectIsNotMutable Exception.
       Examples are methods reduce(), and process().
