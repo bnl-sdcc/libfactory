@@ -167,7 +167,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
     # methods to manipulate the data
     # -------------------------------------------------------------------------
 
-    def analyze(self, *k, **kw):
+    def analyze(self, analyzer):
         """
         generic method that picks the right one 
         based on the type of analyzer
@@ -176,15 +176,15 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         """
         self.log.debug('Starting')
         if analyzer.analyzertype == 'indexby':
-            return self.indexby(*, **kw)
+            return self.indexby(analyzer)
         elif analyzer.analyzertype == 'filter':
-            return self.filter(*, **kw)
+            return self.filter(analyzer)
         elif analyzer.analyzertype == 'map':
-            return self.map(*, **kw)
+            return self.map(analyzer)
         elif analyzer.analyzertype == 'reduce':
-            return self.reduce(*, **kw)
+            return self.reduce(analyzer)
         elif analyzer.analyzertype == 'process':
-            return self.process(*, **kw)
+            return self.process(analyzer)
         else:
             msg = 'Input object %s is not a valid analyzer. Raising exception.'
             self.log.error(msg)
@@ -289,7 +289,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
 
 
     @validate_call
-    def reduce(self, analyzer, value=None):
+    def reduce(self, analyzer):
         """
         process the entire self.data at the raw level and accumulate values
         :param analyzer: an object implementing method reduce()
@@ -298,6 +298,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         self.log.debug('Starting with analyzer %s' %analyzer)
         
         if self.is_raw:
+            value = analyzer.init_value
             for item in self.data:
                 value = analyzer.reduce(value, item) 
             new_info = StatusInfo(value, 
@@ -307,7 +308,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         else:
             new_data = {}
             for key, statusinfo in self.data.items(): 
-                new_data[key] = statusinfo.reduce(analyzer, value)
+                new_data[key] = statusinfo.reduce(analyzer)
             new_info = StatusInfo(new_data, 
                                   is_raw=False, 
                                   is_mutable=False, 
@@ -400,33 +401,39 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
 class Analyzer(object):
     pass
 
+
 class AnalyzerIndexBy(Analyzer):
     analyzertype = "indexby"
     def indexby(self):
         raise NotImplementedError
+
 
 class AnalyzerFilter(Analyzer):
     analyzertype = "filter"
     def filter(self):
         raise NotImplementedError
 
+
 class AnalyzerMap(Analyzer):
     analyzertype = "map"
     def map(self):
         raise NotImplementedError
 
+
 class AnalyzerReduce(Analyzer):
     analyzertype = "reduce"
+    def __init__(self, init_value=None):
+        self.init_value = init_value
     def reduce(self):
         raise NotImplementedError
+
 
 class AnalyzerProcess(Analyzer):
     analyzertype = "process"
     def process(self):
         raise NotImplementedError
 
-# FIXME
-# ??? how to pass the initial value for reduce() ???
+
 class Algorithm(object):
     """
     container for multiple Analyzer objects
@@ -498,9 +505,6 @@ class AttributeValue(AnalyzerFilter):
 
 class Count(AnalyzerProcess):
 
-    def __init__(self):
-        pass
-
     def process(self, data):
         return len(data)
 
@@ -509,6 +513,7 @@ class TotalRunningTime(AnalyzerReduce):
 
     def __init__(self):
         self.now = int(time.time())
+        super(TotalRunningTime, self).__init__(0)
 
     def reduce(self, value, job):
         running = self.now - int(job['enteredcurrentstatus'])
