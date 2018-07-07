@@ -167,7 +167,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
     # methods to manipulate the data
     # -------------------------------------------------------------------------
 
-    def analyze(self, analyzer):
+    def analyze(self, *k, **kw):
         """
         generic method that picks the right one 
         based on the type of analyzer
@@ -176,15 +176,15 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         """
         self.log.debug('Starting')
         if analyzer.analyzertype == 'indexby':
-            return self.indexby(analyzer)
+            return self.indexby(*, **kw)
         elif analyzer.analyzertype == 'filter':
-            return self.filter(analyzer)
+            return self.filter(*, **kw)
         elif analyzer.analyzertype == 'map':
-            return self.map(analyzer)
+            return self.map(*, **kw)
         elif analyzer.analyzertype == 'reduce':
-            return self.reduce(analyzer)
+            return self.reduce(*, **kw)
         elif analyzer.analyzertype == 'process':
-            return self.process(analyzer)
+            return self.process(*, **kw)
         else:
             msg = 'Input object %s is not a valid analyzer. Raising exception.'
             self.log.error(msg)
@@ -425,7 +425,8 @@ class AnalyzerProcess(Analyzer):
     def process(self):
         raise NotImplementedError
 
-
+# FIXME
+# ??? how to pass the initial value for reduce() ???
 class Algorithm(object):
     """
     container for multiple Analyzer objects
