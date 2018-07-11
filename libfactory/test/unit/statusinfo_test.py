@@ -6,7 +6,10 @@ from libfactory import info
 
 class TestStatusInfo(unittest.TestCase):
 
-    def testgroupby(self):
+    def setUp(self):
+        self.info = info.StatusInfo()
+
+    def test_groupby(self):
         pass
 
 
