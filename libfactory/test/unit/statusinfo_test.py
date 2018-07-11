@@ -4,7 +4,7 @@ import unittest
 from libfactory import info
 
 
-class TestInfo(unittest.TestCase):
+class TestStatusInfo(unittest.TestCase):
 
     def testgroupby(self):
         pass
