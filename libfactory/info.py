@@ -201,6 +201,9 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         return algorithm.analyze(self)
 
 
+    # -------------------------------------------------------------------------
+
+
     @validate_call
     def indexby(self, analyzer):
         """
@@ -216,19 +219,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
 
         if self.is_raw:
             self.log.debug('Data is raw')
-            # 1
-            tmp_new_data = {} 
-            for item in self.data:
-                key = analyzer.indexby(item)
-                if key:
-                    if key not in tmp_new_data.keys():
-                        tmp_new_data[key] = []
-                    tmp_new_data[key].append(item) 
-            # 2
-            new_data = {}
-            for k, v in tmp_new_data.items():
-                new_data[k] = StatusInfo(v, timestamp=self.timestamp)
-            # 3
+            new_data = self.__indexby(analyzer)
             new_info = StatusInfo(new_data, 
                                   is_raw=False, 
                                   timestamp=self.timestamp)
@@ -244,6 +235,26 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
             return new_info
 
 
+    def __indexby(self, analyzer):
+            # 1
+            tmp_new_data = {} 
+            for item in self.data:
+                key = analyzer.indexby(item)
+                if key:
+                    if key not in tmp_new_data.keys():
+                        tmp_new_data[key] = []
+                    tmp_new_data[key].append(item) 
+            # 2
+            new_data = {}
+            for k, v in tmp_new_data.items():
+                new_data[k] = StatusInfo(v, timestamp=self.timestamp)
+
+            return new_data
+
+
+    # -------------------------------------------------------------------------
+
+
     @validate_call
     def map(self, analyzer):
         """
@@ -255,10 +266,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         self.log.debug('Starting with analyzer %s' %analyzer)
 
         if self.is_raw:
-            new_data = []
-            for item in self.data:
-                new_item = analyzer.map(item)
-                new_data.append(new_item)
+            new_data = self.__map(analyzer)
             new_info = StatusInfo(new_data, timestamp=self.timestamp)
             return new_info
         else:
@@ -269,6 +277,17 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
                                   is_raw=False, 
                                   timestamp=self.timestamp)
             return new_info
+
+
+   def __map(self, analyzer):
+            new_data = []
+            for item in self.data:
+                new_item = analyzer.map(item)
+                new_data.append(new_item)
+            return new_data
+    
+
+    # -------------------------------------------------------------------------
 
 
     @validate_call
@@ -282,10 +301,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         self.log.debug('Starting with analyzer %s' %analyzer)
 
         if self.is_raw:
-            new_data = []
-            for item in self.data:
-                if analyzer.filter(item):
-                    new_data.append(item)
+            new_data = self.__filter(analyzer)
             new_info = StatusInfo(new_data, timestamp=self.timestamp)
             return new_info
         else:
@@ -298,6 +314,17 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
             return new_info
 
 
+    def __filter(self, analyzer):
+            new_data = []
+            for item in self.data:
+                if analyzer.filter(item):
+                    new_data.append(item)
+            return new_data
+
+
+    # -------------------------------------------------------------------------
+
+
     @validate_call
     def reduce(self, analyzer):
         """
@@ -308,10 +335,8 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         self.log.debug('Starting with analyzer %s' %analyzer)
         
         if self.is_raw:
-            value = analyzer.init_value
-            for item in self.data:
-                value = analyzer.reduce(value, item) 
-            new_info = StatusInfo(value, 
+            new_data = self.__reduce(analyzer)
+            new_info = StatusInfo(new_data, 
                                   is_mutable=False, 
                                   timestamp=self.timestamp)
             return new_info
@@ -326,6 +351,16 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
             return new_info
 
 
+    def __reduce(self, analyzer):
+            value = analyzer.init_value
+            for item in self.data:
+                value = analyzer.reduce(value, item) 
+            return value
+
+
+    # -------------------------------------------------------------------------
+
+
     @validate_call
     def process(self, analyzer):
         """
@@ -336,8 +371,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         self.log.debug('Starting with analyzer %s' %analyzer)
 
         if self.is_raw:
-            new_data = None
-            new_data = analyzer.process(self.data)
+            new_data = self.__process(analyzer)
             new_info = StatusInfo(new_data, 
                                   is_mutable=False, 
                                   timestamp=self.timestamp)
@@ -351,6 +385,11 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
                                   is_mutable=False, 
                                   timestamp=self.timestamp)
             return new_info
+
+
+    def __process(self, analyzer):
+            new_data = analyzer.process(self.data)
+            return new_data
 
 
     # -------------------------------------------------------------------------
