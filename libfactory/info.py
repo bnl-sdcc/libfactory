@@ -115,6 +115,25 @@ def validate_call(method):
     return wrapper
 
 
+def catch_exception(method):
+    """
+    catches any exception during data processing
+    and raises an AnalyzerFailure exception
+    """
+    def wrapper(self, analyzer):
+        try:
+            out = method(self, analyzer)
+        except Exception, ex:
+            msg = 'Exception of type "%s" ' %ex.__class__.__name__
+            msg += 'with content "%s" ' %ex
+            msg += 'while calling "%s" ' %method.__name__
+            msg += 'with analyzer "%s"' %analyzer
+            raise AnalyzerFailure(msg)
+        else:
+            return out
+    return wrapper
+
+
 # =============================================================================
 # Info class
 # =============================================================================
@@ -235,21 +254,22 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
             return new_info
 
 
+    @catch_exception
     def __indexby(self, analyzer):
-            # 1
-            tmp_new_data = {} 
-            for item in self.data:
-                key = analyzer.indexby(item)
-                if key:
-                    if key not in tmp_new_data.keys():
-                        tmp_new_data[key] = []
-                    tmp_new_data[key].append(item) 
-            # 2
-            new_data = {}
-            for k, v in tmp_new_data.items():
-                new_data[k] = StatusInfo(v, timestamp=self.timestamp)
+        # 1
+        tmp_new_data = {} 
+        for item in self.data:
+            key = analyzer.indexby(item)
+            if key:
+                if key not in tmp_new_data.keys():
+                    tmp_new_data[key] = []
+                tmp_new_data[key].append(item) 
+        # 2
+        new_data = {}
+        for k, v in tmp_new_data.items():
+            new_data[k] = StatusInfo(v, timestamp=self.timestamp)
 
-            return new_data
+        return new_data
 
 
     # -------------------------------------------------------------------------
@@ -279,12 +299,14 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
             return new_info
 
 
-   def __map(self, analyzer):
-            new_data = []
-            for item in self.data:
-                new_item = analyzer.map(item)
-                new_data.append(new_item)
-            return new_data
+    
+    @catch_exception
+    def __map(self, analyzer):
+        new_data = []
+        for item in self.data:
+            new_item = analyzer.map(item)
+            new_data.append(new_item)
+        return new_data
     
 
     # -------------------------------------------------------------------------
@@ -314,12 +336,13 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
             return new_info
 
 
+    @catch_exception
     def __filter(self, analyzer):
-            new_data = []
-            for item in self.data:
-                if analyzer.filter(item):
-                    new_data.append(item)
-            return new_data
+        new_data = []
+        for item in self.data:
+            if analyzer.filter(item):
+                new_data.append(item)
+        return new_data
 
 
     # -------------------------------------------------------------------------
@@ -351,11 +374,12 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
             return new_info
 
 
+    @catch_exception
     def __reduce(self, analyzer):
-            value = analyzer.init_value
-            for item in self.data:
-                value = analyzer.reduce(value, item) 
-            return value
+        value = analyzer.init_value
+        for item in self.data:
+            value = analyzer.reduce(value, item) 
+        return value
 
 
     # -------------------------------------------------------------------------
@@ -387,9 +411,10 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
             return new_info
 
 
+    @catch_exception
     def __process(self, analyzer):
-            new_data = analyzer.process(self.data)
-            return new_data
+        new_data = analyzer.process(self.data)
+        return new_data
 
 
     # -------------------------------------------------------------------------
