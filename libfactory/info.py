@@ -95,7 +95,15 @@ import sys
 #   otherwise, it does not find it
 # =============================================================================
 
+
 def validate_call(method):
+    """
+    validates calls to the processing methods.
+    Checks: 
+        * if the StatusInfo object is mutable or not, 
+        * if a method is being called with the right type of Analyzer
+    Exceptions are raised with some criteria is not met.
+    """
     def wrapper(self, analyzer, *k, **kw):
         method_name = method.__name__
         analyzertype = analyzer.analyzertype
