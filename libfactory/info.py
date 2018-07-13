@@ -191,6 +191,16 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
             raise NotAnAnalyzer()
 
 
+    def apply_algorithm(self, algorithm):
+        """
+        invoke all steps in an Algorithm object
+        and returns the final output
+        :param Algorithm algorithm: 
+        :rtype StatusInfo:
+        """
+        return algorithm.analyze(self)
+
+
     @validate_call
     def indexby(self, analyzer):
         """
