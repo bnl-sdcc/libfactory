@@ -37,7 +37,7 @@ class querystatusbase(_thread):
             self.update()
             self.currentinfo = self.queryplugin.getinfo()
         except Exception, ex:
-            self.log.error('exception captured: %s' $ex)
+            self.log.error('exception captured: %s' %ex)
         self.log.debug('end')
 
 
