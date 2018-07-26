@@ -538,7 +538,7 @@ class Algorithm(object):
 #  Some basic Analyzers
 # =============================================================================
 
-class GroupByKey(AnalyzerIndexBy):
+class IndexByKey(AnalyzerIndexBy):
 
     def __init__(self, key):
         self.key = key
@@ -550,7 +550,7 @@ class GroupByKey(AnalyzerIndexBy):
             return None
 
 
-class GroupByKeyRemap(AnalyzerIndexBy):
+class IndexByKeyRemap(AnalyzerIndexBy):
 
     def __init__(self, key, mapping_d):
         self.key = key
@@ -591,7 +591,7 @@ class Count(AnalyzerProcess):
         return len(data)
 
 
-class TotalRunningTime(AnalyzerReduce):
+class TotalRunningTimeFromRunningJobs(AnalyzerReduce):
 
     def __init__(self):
         self.now = int(time.time())
@@ -604,8 +604,7 @@ class TotalRunningTime(AnalyzerReduce):
         return running
 
 
-# FIXME: need a better name for this class
-class TotalRunningTime2(AnalyzerReduce):
+class TotalRunningTimeFromRunningAndFinishedJobs(AnalyzerReduce):
 
     def __init__(self):
         self.now = int(time.time())
