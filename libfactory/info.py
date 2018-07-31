@@ -147,9 +147,6 @@ def catch_exception(method):
 # =============================================================================
 
 class StatusInfo(object):
-    # FIXME !! description is needed here !!!
-    """
-    """
 
     def __init__(self, data, is_raw=True, is_mutable=True, timestamp=None):
         """ 
@@ -239,7 +236,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
            1. make a dictinary grouping items according to rules in analyzer
            2. convert that dictionary into a dictionary of StatusInfo objects
            3. make a new StatusInfo with that dictionary
-        :param analyzer: an object implementing method indexby()
+        :param analyzer: an instance of class AnalyzerIndexBy(), implementing method indexby()
         :rtype StatusInfo:
         """
         self.log.debug('Starting with analyzer %s' %analyzer)
@@ -255,6 +252,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
             self.log.debug('Data is not raw')
             new_data = {}
             for key, statusinfo in self.data.items():
+                self.log.debug('calling indexby() for content in key %s'%key)
                 new_data[key] = statusinfo.indexby(analyzer)
             new_info = StatusInfo(new_data, 
                                   is_raw=False, 
@@ -288,7 +286,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         """
         modifies each item in self.data according to rules
         in analyzer
-        :param analyzer: an object implementing method map()
+        :param analyzer: an instance of class AnalyzerMap(), implementing method map()
         :rtype StatusInfo:
         """
         self.log.debug('Starting with analyzer %s' %analyzer)
@@ -300,6 +298,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         else:
             new_data = {}
             for key, statusinfo in self.data.items():
+                self.log.debug('calling map() for content in key %s'%key)
                 new_data[key] = statusinfo.map(analyzer)
             new_info = StatusInfo(new_data, 
                                   is_raw=False, 
@@ -325,7 +324,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         """
         eliminates the items in self.data that do not pass
         the filter implemented in analyzer
-        :param analyzer: an object implementing method filter()
+        :param analyzer: an instance of class AnalyzerFilter(), implementing method filter()
         :rtype StatusInfo:
         """
         self.log.debug('Starting with analyzer %s' %analyzer)
@@ -337,6 +336,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         else:
             new_data = {}
             for key, statusinfo in self.data.items(): 
+                self.log.debug('calling filter() for content in key %s'%key)
                 new_data[key] = statusinfo.filter(analyzer)
             new_info = StatusInfo(new_data, 
                                   is_raw=False, 
@@ -360,7 +360,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
     def reduce(self, analyzer):
         """
         process the entire self.data at the raw level and accumulate values
-        :param analyzer: an object implementing method reduce()
+        :param analyzer: an instance of class AnalyzerReduce(), implementing method reduce()
         :rtype StatusInfo: 
         """
         self.log.debug('Starting with analyzer %s' %analyzer)
@@ -374,6 +374,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         else:
             new_data = {}
             for key, statusinfo in self.data.items(): 
+                self.log.debug('calling reduce() for content in key %s'%key)
                 new_data[key] = statusinfo.reduce(analyzer)
             new_info = StatusInfo(new_data, 
                                   is_raw=False, 
@@ -397,7 +398,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
     def process(self, analyzer):
         """
         process the entire self.data at the raw level
-        :param analyzer: an object implementing method process()
+        :param analyzer: an instance of class AnalyzerProcess(), implementing method process()
         :rtype StatusInfo: 
         """
         self.log.debug('Starting with analyzer %s' %analyzer)
@@ -411,6 +412,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         else:
             new_data = {}
             for key, statusinfo in self.data.items(): 
+                self.log.debug('calling process() for content in key %s'%key)
                 new_data[key] = statusinfo.process(analyzer)
             new_info = StatusInfo(new_data, 
                                   is_raw=False, 
