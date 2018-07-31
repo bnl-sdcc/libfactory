@@ -433,7 +433,8 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
 
     def getraw(self):
         """
-        returns the structure of all raw data components
+        returns the entire tree structure, including the raw data 
+        at the deepest level
         :rtype composed data:
         """
         if self.is_raw:
