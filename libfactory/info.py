@@ -236,7 +236,8 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
            1. make a dictinary grouping items according to rules in analyzer
            2. convert that dictionary into a dictionary of StatusInfo objects
            3. make a new StatusInfo with that dictionary
-        :param analyzer: an instance of class AnalyzerIndexBy(), implementing method indexby()
+        :param analyzer: an instance of AnalyzerIndexBy-type class 
+                         implementing method indexby()
         :rtype StatusInfo:
         """
         self.log.debug('Starting with analyzer %s' %analyzer)
@@ -286,7 +287,8 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         """
         modifies each item in self.data according to rules
         in analyzer
-        :param analyzer: an instance of class AnalyzerMap(), implementing method map()
+        :param analyzer: an instance of AnalyzerMap-type class 
+                         implementing method map()
         :rtype StatusInfo:
         """
         self.log.debug('Starting with analyzer %s' %analyzer)
@@ -324,7 +326,8 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         """
         eliminates the items in self.data that do not pass
         the filter implemented in analyzer
-        :param analyzer: an instance of class AnalyzerFilter(), implementing method filter()
+        :param analyzer: an instance of AnalyzerFilter-type class 
+                         implementing method filter()
         :rtype StatusInfo:
         """
         self.log.debug('Starting with analyzer %s' %analyzer)
@@ -360,7 +363,8 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
     def reduce(self, analyzer):
         """
         process the entire self.data at the raw level and accumulate values
-        :param analyzer: an instance of class AnalyzerReduce(), implementing method reduce()
+        :param analyzer: an instance of AnalyzerReduce-type class 
+                         implementing method reduce()
         :rtype StatusInfo: 
         """
         self.log.debug('Starting with analyzer %s' %analyzer)
@@ -398,7 +402,8 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
     def process(self, analyzer):
         """
         process the entire self.data at the raw level
-        :param analyzer: an instance of class AnalyzerProcess(), implementing method process()
+        :param analyzer: an instance of AnalyzerProcess-type class 
+                         implementing method process()
         :rtype StatusInfo: 
         """
         self.log.debug('Starting with analyzer %s' %analyzer)
