@@ -169,7 +169,7 @@ class HTCondorSchedd(object):
         self.log.debug('list of attributes in the query = %s' %attribute_l)
         self.log.debug('list of constraints in the query = %s' %constraint_l)
         constraint_str = self._build_constraint_str(constraint_l)
-        out = self.collector.query(htcondor.AdTypes.Startd, constraint_str, attribute_l)
+        out = self.pool.collector.query(htcondor.AdTypes.Startd, constraint_str, attribute_l)
         self.log.debug('out = %s' %out)
         return out
 
