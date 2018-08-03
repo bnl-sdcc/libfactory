@@ -11,43 +11,72 @@ import classad
 import htcondor
 
 
+#class HTCondorPool(object):
+#
+#    def __init__(self, localcollector=True, remotecollector=None):
+#        """
+#        :param string remotecollector: hostname of the collector
+#        """
+#        self.log = logging.getLogger('htcondorpool')
+#        self.log.addHandler(logging.NullHandler())
+#        self.localcollector = localcollector
+#        self.remotecollector = socket.gethostbyaddr(remotecollector)[0]
+#        self.collector = self.getcollector()
+#        self.log.debug('HTCondorPool object initialized')
+#
+#
+#    def getcollector(self):
+#        self.log.debug('starting')
+#        if self.localcollector:
+#            collector = htcondor.Collector()
+#            self.log.debug('got local collector')
+#        else:
+#            if self.remotecollector:
+#                collector = htcondor.Collector(self.remotecollector)
+#                self.log.debug('got remote collector')
+#            else:
+#                collector = None
+#        #self.__validate_collector(collector)
+#        return collector
+#
+#    def __validate_collector(self, collector):
+#        """
+#        checks if the collector is reachable
+#        """
+#        try:
+#            # should return an empty list if Collector exists
+#            collector.query(constraint="False") 
+#        except Exception, ex:
+#            raise CollectorNotReachable()
+
+
+
 class HTCondorPool(object):
 
-    def __init__(self, localcollector=True, remotecollector=None):
+    def __init__(self, remotecollector=None):
         """
         :param string remotecollector: hostname of the collector
         """
         self.log = logging.getLogger('htcondorpool')
         self.log.addHandler(logging.NullHandler())
-        self.localcollector = localcollector
-        self.remotecollector = socket.gethostbyaddr(remotecollector)[0]
+        self.remotecollector = remotecollector
+        if self.remotecollector:
+            # in case the remotecollector is passed as an IP address
+            # we convert it into a hostname
+            self.remotecollector = socket.gethostbyaddr(remotecollector)[0]
         self.collector = self.getcollector()
         self.log.debug('HTCondorPool object initialized')
 
 
     def getcollector(self):
         self.log.debug('starting')
-        if self.localcollector:
+        if self.remotecollector:
+            collector = htcondor.Collector(self.remotecollector)
+            self.log.debug('got remote collector')
+        else:
             collector = htcondor.Collector()
             self.log.debug('got local collector')
-        else:
-            if self.remotecollector:
-                collector = htcondor.Collector(self.remotecollector)
-                self.log.debug('got remote collector')
-            else:
-                collector = None
-        #self.__validate_collector(collector)
         return collector
-
-    def __validate_collector(self, collector):
-        """
-        checks if the collector is reachable
-        """
-        try:
-            # should return an empty list if Collector exists
-            collector.query(constraint="False") 
-        except Exception, ex:
-            raise CollectorNotReachable()
 
 
 class HTCondorSchedd(object):
