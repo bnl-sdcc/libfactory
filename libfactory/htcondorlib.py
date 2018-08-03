@@ -11,64 +11,40 @@ import classad
 import htcondor
 
 
-#class HTCondorPool(object):
-#
-#    def __init__(self, localcollector=True, remotecollector=None):
-#        """
-#        :param string remotecollector: hostname of the collector
-#        """
-#        self.log = logging.getLogger('htcondorpool')
-#        self.log.addHandler(logging.NullHandler())
-#        self.localcollector = localcollector
-#        self.remotecollector = socket.gethostbyaddr(remotecollector)[0]
-#        self.collector = self.getcollector()
-#        self.log.debug('HTCondorPool object initialized')
-#
-#
-#    def getcollector(self):
-#        self.log.debug('starting')
-#        if self.localcollector:
-#            collector = htcondor.Collector()
-#            self.log.debug('got local collector')
-#        else:
-#            if self.remotecollector:
-#                collector = htcondor.Collector(self.remotecollector)
-#                self.log.debug('got remote collector')
-#            else:
-#                collector = None
-#        #self.__validate_collector(collector)
-#        return collector
-#
-#    def __validate_collector(self, collector):
-#        """
-#        checks if the collector is reachable
-#        """
-#        try:
-#            # should return an empty list if Collector exists
-#            collector.query(constraint="False") 
-#        except Exception, ex:
-#            raise CollectorNotReachable()
-
+def _build_constraint_str(constraint_l=None):
+    """
+    """
+    if constraint_l:
+        constraint_str = " && ".join(constraint_l)
+    else:
+        constraint_str = "true"
+    return constraint_str
 
 
 class HTCondorPool(object):
 
-    def __init__(self, remotecollector=None):
+    def __init__(self, remotecollectorhostname=None, remotecollectorport=None):
         """
-        :param string remotecollector: hostname of the collector
+        :param string remotecollectorhostname: hostname or IP address of the 
+                                               remote collector
+        :param string remotecollectorport: port to contact the remote collector
         """
         self.log = logging.getLogger('htcondorpool')
         self.log.addHandler(logging.NullHandler())
-        self.remotecollector = remotecollector
-        if self.remotecollector:
-            # in case the remotecollector is passed as an IP address
-            # we convert it into a hostname
-            self.remotecollector = socket.gethostbyaddr(remotecollector)[0]
-        self.collector = self.getcollector()
+
+        if remotecollectorhostname:
+            self.remotecollector = \
+                socket.gethostbyaddr(remotecollectorhostname)[0]
+            if remotecollectorport:
+                self.remotecollector += ':' + str(remotecollectorport)
+        else:
+            self.remotecollector = None
+
+        self.collector = self._getcollector()
         self.log.debug('HTCondorPool object initialized')
 
 
-    def getcollector(self):
+    def _getcollector(self):
         self.log.debug('starting')
         if self.remotecollector:
             collector = htcondor.Collector(self.remotecollector)
@@ -78,6 +54,35 @@ class HTCondorPool(object):
             self.log.debug('got local collector')
         return collector
 
+    # -------------------------------------------------------------------------
+
+    def condor_status(self, attribute_l, constraint_l=None):
+        """ 
+        Equivalent to condor_status
+        We query for a few specific ClassAd attributes 
+        (faster than getting everything)
+        Output of collector.query(htcondor.AdTypes.Startd) looks like
+         [
+          [ Name = "slot1@mysite.net"; Activity = "Idle"; MyType = "Machine"; TargetType = "Job"; State = "Unclaimed"; CurrentTime = time() ], 
+          [ Name = "slot2@mysite.net"; Activity = "Idle"; MyType = "Machine"; TargetType = "Job"; State = "Unclaimed"; CurrentTime = time() ]
+         ]
+        :param list attribute_l: list of classads strings to include in the query 
+        :param list constraint_l: list of constraints strings in the status query
+        """
+        self.log.debug('starting')
+        if type(attribute_l) is not list:
+            raise IncorrectInputType("attribute_l", list)
+        if constraint_l is not None and\
+           type(constraint_l) is not list:
+            raise IncorrectInputType("constraint_l", list)
+
+        self.log.debug('list of attributes in the query = %s' %attribute_l)
+        self.log.debug('list of constraints in the query = %s' %constraint_l)
+        constraint_str = _build_constraint_str(constraint_l)
+        out = self.collector.query(htcondor.AdTypes.Startd, constraint_str, attribute_l)
+        self.log.debug('out = %s' %out)
+        return out
+    
 
 class HTCondorSchedd(object):
 
@@ -138,7 +143,7 @@ class HTCondorSchedd(object):
         self.log.debug('list of attributes in the query = %s' %attribute_l)
         self.log.debug('list of constraints in the query = %s' %constraint_l)
 
-        constraint_str = self._build_constraint_str(constraint_l)
+        constraint_str = _build_constraint_str(constraint_l)
         out = self.schedd.query(constraint_str, attribute_l)
         self.log.debug('out = %s' %out)
         return out
@@ -159,7 +164,7 @@ class HTCondorSchedd(object):
         self.log.debug('list of attributes in the query = %s' %attribute_l)
         self.log.debug('list of constraints in the query = %s' %constraint_l)
 
-        constraint_str = self._build_constraint_str(constraint_l)
+        constraint_str = _build_constraint_str(constraint_l)
         out = self.schedd.history(constraint_str, attribute_l, 0)
         out = list(out)
         self.log.debug('out = %s' %out)
@@ -175,34 +180,6 @@ class HTCondorSchedd(object):
         self.schedd.act(htcondor.JobAction.Remove, jobid_l)
         self.log.debug('finished')
     
-    
-    def condor_status(self, attribute_l, constraint_l=None):
-        """ 
-        Equivalent to condor_status
-        We query for a few specific ClassAd attributes 
-        (faster than getting everything)
-        Output of collector.query(htcondor.AdTypes.Startd) looks like
-         [
-          [ Name = "slot1@mysite.net"; Activity = "Idle"; MyType = "Machine"; TargetType = "Job"; State = "Unclaimed"; CurrentTime = time() ], 
-          [ Name = "slot2@mysite.net"; Activity = "Idle"; MyType = "Machine"; TargetType = "Job"; State = "Unclaimed"; CurrentTime = time() ]
-         ]
-        :param list attribute_l: list of classads strings to include in the query 
-        :param list constraint_l: list of constraints strings in the status query
-        """
-        self.log.debug('starting')
-        if type(attribute_l) is not list:
-            raise IncorrectInputType("attribute_l", list)
-        if constraint_l is not None and\
-           type(constraint_l) is not list:
-            raise IncorrectInputType("constraint_l", list)
-
-        self.log.debug('list of attributes in the query = %s' %attribute_l)
-        self.log.debug('list of constraints in the query = %s' %constraint_l)
-        constraint_str = self._build_constraint_str(constraint_l)
-        out = self.pool.collector.query(htcondor.AdTypes.Startd, constraint_str, attribute_l)
-        self.log.debug('out = %s' %out)
-        return out
-
 
     def condor_submit(self, jdl_str, n):
         """
@@ -239,16 +216,6 @@ class HTCondorSchedd(object):
             submit.queue(txn, n)
         self.log.debug('finished')
 
-
-    def _build_constraint_str(self, constraint_l=None):
-        """
-        """
-        self.log.debug('starting')
-        if constraint_l:
-            constraint_str = " && ".join(constraint_l)
-        else:
-            constraint_str = "true"
-        return constraint_str
 
 # =============================================================================
 #   Exceptions
