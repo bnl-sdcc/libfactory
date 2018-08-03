@@ -5,6 +5,7 @@ __email__ = "jcaballero@bnl.gov"
 
 import logging
 import logging.handlers
+import socket
 
 import classad
 import htcondor
@@ -19,7 +20,7 @@ class HTCondorPool(object):
         self.log = logging.getLogger('htcondorpool')
         self.log.addHandler(logging.NullHandler())
         self.localcollector = localcollector
-        self.remotecollector = remotecollector
+        self.remotecollector = socket.gethostbyaddr(remotecollector)[0]
         self.collector = self.getcollector()
         self.log.debug('HTCondorPool object initialized')
 
