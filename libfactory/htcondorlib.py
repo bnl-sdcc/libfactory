@@ -54,6 +54,18 @@ class HTCondorPool(object):
             self.log.debug('got local collector')
         return collector
 
+
+#    def __validate_collector(self, collector):
+#        """
+#        checks if the collector is reachable
+#        """
+#        try:
+#            # should return an empty list if Collector exists
+#            collector.query(constraint="False") 
+#        except Exception, ex:
+#            raise CollectorNotReachable()
+
+
     # -------------------------------------------------------------------------
 
     def condor_status(self, attribute_l, constraint_l=None):
