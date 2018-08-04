@@ -10,7 +10,6 @@ import socket
 import classad
 import htcondor
 
-
 def _build_constraint_str(constraint_l=None):
     """
     """
@@ -23,50 +22,33 @@ def _build_constraint_str(constraint_l=None):
 
 class HTCondorPool(object):
 
-    def __init__(self, remotecollectorhostname=None, remotecollectorport=None):
+    def __init__(self, hostname=None, port=None):
         """
-        :param string remotecollectorhostname: hostname or IP address of the 
-                                               remote collector
-        :param string remotecollectorport: port to contact the remote collector
+        :param string remotecollector: hostname of the collector
         """
         self.log = logging.getLogger('htcondorpool')
         self.log.addHandler(logging.NullHandler())
-
-        if remotecollectorhostname:
-            self.remotecollector = \
-                socket.gethostbyaddr(remotecollectorhostname)[0]
-            if remotecollectorport:
-                self.remotecollector += ':' + str(remotecollectorport)
-        else:
-            self.remotecollector = None
-
-        self.collector = self._getcollector()
+        self.hostname = hostname
+        self.port = port  
+        self.collector = self.__getcollector()
         self.log.debug('HTCondorPool object initialized')
 
+    def __getcollector(self):
 
-    def _getcollector(self):
         self.log.debug('starting')
-        if self.remotecollector:
-            collector = htcondor.Collector(self.remotecollector)
+
+        if self.hostname:
+            collector =  socket.gethostbyaddr(self.hostname)[0]
+            if self.port:
+                    collector += ':' + str(self.port)
+            collector = htcondor.Collector(collector)
             self.log.debug('got remote collector')
         else:
             collector = htcondor.Collector()
             self.log.debug('got local collector')
+
         return collector
 
-
-#    def __validate_collector(self, collector):
-#        """
-#        checks if the collector is reachable
-#        """
-#        try:
-#            # should return an empty list if Collector exists
-#            collector.query(constraint="False") 
-#        except Exception, ex:
-#            raise CollectorNotReachable()
-
-
-    # -------------------------------------------------------------------------
 
     def condor_status(self, attribute_l, constraint_l=None):
         """ 
@@ -87,45 +69,75 @@ class HTCondorPool(object):
         if constraint_l is not None and\
            type(constraint_l) is not list:
             raise IncorrectInputType("constraint_l", list)
-
         self.log.debug('list of attributes in the query = %s' %attribute_l)
         self.log.debug('list of constraints in the query = %s' %constraint_l)
         constraint_str = _build_constraint_str(constraint_l)
         out = self.collector.query(htcondor.AdTypes.Startd, constraint_str, attribute_l)
         self.log.debug('out = %s' %out)
         return out
-    
 
+    def __validate_collector(self, collector):
+        """
+        checks if the collector is reachable
+        """
+        try:
+            # should return an empty list if Collector exists
+            collector.query(constraint="False") 
+        except Exception, ex: 
+            raise CollectorNotReachable()
+
+
+    def getSchedd(self, hostname):
+        scheddAd = self.collector.locate(htcondor.DaemonTypes.Schedd, hostname) 
+        schedd = htcondor.Schedd(scheddAd)
+        return HTCondorSchedd(schedd)
+
+
+
+
+#class HTCondorSchedd(object):
+#
+#    def __init__(self, remoteschedd=None, pool=None):
+#        """
+#        :param string remoteschedd: hostname of the schedd when it is not local
+#        """
+#        self.log = logging.getLogger('htcondorschedd')
+#        self.log.addHandler(logging.NullHandler())
+#        self.remoteschedd = remoteschedd
+#        self.pool = pool
+#        self.schedd = self.getschedd()
+#        self.log.debug('HTCondorSchedd object initialized')
+#
+#
+#    def getschedd(self):
+#        self.log.debug('starting')
+#        if not self.remoteschedd: 
+#            schedd = htcondor.Schedd() # Defaults to the local schedd.
+#            self.log.debug('got local schedd')
+#        else:
+#            if self.pool:
+#                scheddAd = self.pool.collector.locate(htcondor.DaemonTypes.Schedd, self.remoteschedd)
+#                schedd = htcondor.Schedd(scheddAd) 
+#                self.log.debug('got remote schedd')
+#            else:
+#                pass
+#                #FIXME raise Exception ???
+#        #self.__validate_schedd(schedd)
+#        return schedd
+    
 class HTCondorSchedd(object):
 
-    def __init__(self, remoteschedd=None, pool=None):
+    def __init__(self, schedd=None):
         """
-        :param string remoteschedd: hostname of the schedd when it is not local
         """
         self.log = logging.getLogger('htcondorschedd')
         self.log.addHandler(logging.NullHandler())
-        self.remoteschedd = remoteschedd
-        self.pool = pool
-        self.schedd = self.getschedd()
+        if schedd:
+            self.schedd = schedd 
+        else:
+            self.schedd = htcondor.Schedd()  
         self.log.debug('HTCondorSchedd object initialized')
 
-
-    def getschedd(self):
-        self.log.debug('starting')
-        if not self.remoteschedd: 
-            schedd = htcondor.Schedd() # Defaults to the local schedd.
-            self.log.debug('got local schedd')
-        else:
-            if self.pool:
-                scheddAd = self.pool.collector.locate(htcondor.DaemonTypes.Schedd, self.remoteschedd)
-                schedd = htcondor.Schedd(scheddAd) 
-                self.log.debug('got remote schedd')
-            else:
-                pass
-                #FIXME raise Exception ???
-        #self.__validate_schedd(schedd)
-        return schedd
-    
 
     def __validate_schedd(self, schedd):
         """
@@ -192,6 +204,8 @@ class HTCondorSchedd(object):
         self.schedd.act(htcondor.JobAction.Remove, jobid_l)
         self.log.debug('finished')
     
+    
+
 
     def condor_submit(self, jdl_str, n):
         """
