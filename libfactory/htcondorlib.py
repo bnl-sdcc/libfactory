@@ -10,6 +10,11 @@ import socket
 import classad
 import htcondor
 
+
+# =============================================================================
+#               A N C I L L A R I E S 
+# =============================================================================
+
 def _build_constraint_str(constraint_l=None):
     """
     """
@@ -18,6 +23,19 @@ def _build_constraint_str(constraint_l=None):
     else:
         constraint_str = "true"
     return constraint_str
+
+
+def _address(hostname, port=None)
+    """
+    """
+    hostname = socket.gethostbyaddr(hostname)[0]
+    if port:
+        address = '%s:%s' %(hostname, port)
+    else:
+        address = hostname
+    return address
+
+# =============================================================================
 
 
 class HTCondorPool(object):
@@ -33,22 +51,42 @@ class HTCondorPool(object):
         self.collector = self.__getcollector()
         self.log.debug('HTCondorPool object initialized')
 
+
     def __getcollector(self):
-
+        """
+        """
         self.log.debug('starting')
-
         if self.hostname:
-            collector =  socket.gethostbyaddr(self.hostname)[0]
-            if self.port:
-                    collector += ':' + str(self.port)
-            collector = htcondor.Collector(collector)
+            address = _address(self.hostname, self.port)
+            collector = htcondor.Collector(address)
             self.log.debug('got remote collector')
         else:
             collector = htcondor.Collector()
             self.log.debug('got local collector')
-
         return collector
 
+
+    # FIXME: right now this is orphan code
+    def __validate_collector(self, collector):
+        """
+        checks if the collector is reachable
+        """
+        try:
+            # should return an empty list if Collector exists
+            collector.query(constraint="False") 
+        except Exception, ex: 
+            raise CollectorNotReachable()
+
+
+    def getSchedd(self, hostname, port=None):
+        """
+        """
+        address = _address(hostname, port)
+        scheddAd = self.collector.locate(htcondor.DaemonTypes.Schedd, address) 
+        schedd = htcondor.Schedd(scheddAd)
+        return HTCondorSchedd(schedd)
+
+    # --------------------------------------------------------------------------
 
     def condor_status(self, attribute_l, constraint_l=None):
         """ 
@@ -76,54 +114,8 @@ class HTCondorPool(object):
         self.log.debug('out = %s' %out)
         return out
 
-    def __validate_collector(self, collector):
-        """
-        checks if the collector is reachable
-        """
-        try:
-            # should return an empty list if Collector exists
-            collector.query(constraint="False") 
-        except Exception, ex: 
-            raise CollectorNotReachable()
 
 
-    def getSchedd(self, hostname):
-        scheddAd = self.collector.locate(htcondor.DaemonTypes.Schedd, hostname) 
-        schedd = htcondor.Schedd(scheddAd)
-        return HTCondorSchedd(schedd)
-
-
-
-
-#class HTCondorSchedd(object):
-#
-#    def __init__(self, remoteschedd=None, pool=None):
-#        """
-#        :param string remoteschedd: hostname of the schedd when it is not local
-#        """
-#        self.log = logging.getLogger('htcondorschedd')
-#        self.log.addHandler(logging.NullHandler())
-#        self.remoteschedd = remoteschedd
-#        self.pool = pool
-#        self.schedd = self.getschedd()
-#        self.log.debug('HTCondorSchedd object initialized')
-#
-#
-#    def getschedd(self):
-#        self.log.debug('starting')
-#        if not self.remoteschedd: 
-#            schedd = htcondor.Schedd() # Defaults to the local schedd.
-#            self.log.debug('got local schedd')
-#        else:
-#            if self.pool:
-#                scheddAd = self.pool.collector.locate(htcondor.DaemonTypes.Schedd, self.remoteschedd)
-#                schedd = htcondor.Schedd(scheddAd) 
-#                self.log.debug('got remote schedd')
-#            else:
-#                pass
-#                #FIXME raise Exception ???
-#        #self.__validate_schedd(schedd)
-#        return schedd
     
 class HTCondorSchedd(object):
 
@@ -149,7 +141,7 @@ class HTCondorSchedd(object):
         except Exception, ex:
             raise ScheddNotReachable()
 
-    # -------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
 
     def condor_q(self, attribute_l, constraint_l=None):
         '''
