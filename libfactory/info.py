@@ -632,6 +632,27 @@ class TotalRunningTimeFromRunningAndFinishedJobs(AnalyzerReduce):
         return running
 
 
+class IdleTime(AnalyzerMap):
+
+    def __init__(self):
+        self.now = int(time.time())
+
+    def map(self, job):
+        return self.now - int(job['enteredcurrentstatus'])
+
+
+class ApplyFunction(AnalyzerProcess):
+
+    def __init__(self, func):
+        self.func = func
+
+    def process(self, data):
+        if data:
+            return self.func(data)
+        else:
+            return None
+
+
 
 # =============================================================================
 # Exceptions
