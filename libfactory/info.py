@@ -267,7 +267,7 @@ data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
         tmp_new_data = {} 
         for item in self.data:
             key = analyzer.indexby(item)
-            if key:
+            if key is not None:
                 if key not in tmp_new_data.keys():
                     tmp_new_data[key] = []
                 tmp_new_data[key].append(item) 
