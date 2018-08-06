@@ -25,7 +25,7 @@ def _build_constraint_str(constraint_l=None):
     return constraint_str
 
 
-def _address(hostname, port=None)
+def _address(hostname, port=None):
     """
     """
     hostname = socket.gethostbyaddr(hostname)[0]
