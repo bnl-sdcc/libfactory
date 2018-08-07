@@ -38,18 +38,18 @@ def _address(hostname, port=None):
 # =============================================================================
 
 
-class HTCondorPool(object):
+class HTCondorCollector(object):
 
     def __init__(self, hostname=None, port=None):
         """
         :param string remotecollector: hostname of the collector
         """
-        self.log = logging.getLogger('htcondorpool')
+        self.log = logging.getLogger('htcondorcollector')
         self.log.addHandler(logging.NullHandler())
         self.hostname = hostname
         self.port = port  
         self.collector = self.__getcollector()
-        self.log.debug('HTCondorPool object initialized')
+        self.log.debug('HTCondorCollector object initialized')
 
 
     def __getcollector(self):
