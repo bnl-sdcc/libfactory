@@ -160,10 +160,10 @@ class StatusInfo(object):
 
         msg ='Initializing object with input options: \
 data={data}, is_raw={is_raw}, is_mutable={is_mutable}, timestamp={timestamp}'
-        msg.format(data=data,
-                   is_raw=is_raw,
-                   is_mutable=is_mutable,
-                   timestamp=timestamp)
+        msg = msg.format(data=data,
+                         is_raw=is_raw,
+                         is_mutable=is_mutable,
+                         timestamp=timestamp)
         self.log.debug(msg)
 
         self.is_raw = is_raw
