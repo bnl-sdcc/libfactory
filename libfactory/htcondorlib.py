@@ -59,7 +59,7 @@ import htcondor
 # =============================================================================
 
 def condor_version():
-    return htcondor.condor_version()
+    return htcondor.version()
 
 
 def condor_config_files():
