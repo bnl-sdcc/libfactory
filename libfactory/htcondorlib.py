@@ -46,7 +46,9 @@ __email__ = "jcaballero@bnl.gov"
 
 import logging
 import logging.handlers
+import os
 import socket
+import subprocess
 
 import classad
 import htcondor
@@ -54,6 +56,31 @@ import htcondor
 
 # =============================================================================
 #               A N C I L L A R I E S 
+# =============================================================================
+
+def condor_version():
+    return htcondor.condor_version()
+
+
+def condor_config_files():
+    CONDOR_CONFIG = os.environ.get('CONDOR_CONFIG', None)
+    if CONDOR_CONFIG:
+        return CONDOR_CONFIG
+    else:
+        cmd = 'condor_config_val -config'
+        subproc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        (out, err) = subproc.communicate()
+        st = subproc.returncode
+        return out
+
+
+def condor_config():
+    cmd = 'condor_config_val -dump'
+    subproc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    (out, err) = subproc.communicate()
+    st = subproc.returncode
+    return out
+
 # =============================================================================
 
 def _build_constraint_str(constraint_l=None):
@@ -84,6 +111,9 @@ def _address(hostname, port=None):
         address = hostname
     return address
 
+
+# =============================================================================
+#              C O L L E C T O R   &   S C H E D D 
 # =============================================================================
 
 
