@@ -315,8 +315,9 @@ class HTCondorSchedd(object):
         
         submit = htcondor.Submit(submit_d)
         with self.schedd.transaction() as txn:
-            submit.queue(txn, n)
-        self.log.debug('finished')
+            clusterid = submit.queue(txn, n)
+        self.log.debug('finished submission for clusterid %s' %clusterid)
+        return clusterid
 
 
 # =============================================================================
