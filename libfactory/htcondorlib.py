@@ -296,6 +296,10 @@ class HTCondorSchedd(object):
         self.log.debug('starting')
         submit_d = {}
         for line in jdl_str.split('\n'):
+            if line.startswith('queue '):
+                # the "queue" statement should not be part of the 
+                # submit file string, but it is harmless 
+                continue 
             if line.strip() == '':
                 continue
             try:
@@ -304,12 +308,7 @@ class HTCondorSchedd(object):
                 value = '='.join(fields[1:]).strip()
                 submit_d[key] = value
             except Exception, ex:
-                if line.startswith('queue '):
-                    # the "queue" statement should not be part of the 
-                    # submit file string, but it is harmless 
-                    pass
-                else:
-                    raise MalformedSubmitFile(line)
+                raise MalformedSubmitFile(line)
         self.log.debug('dictionary for submission = %s' %submit_d)
         if not bool(submit_d):
             raise EmptySubmitFile()

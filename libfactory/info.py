@@ -712,3 +712,46 @@ class AnalyzerFailure(Exception):
     def __str__(self):
         return repr(self.value)
 
+
+# =============================================================================
+
+class Item(object):
+    """
+    class to store an arbitrary dictionary, 
+    and read them as they were attributes
+    """
+
+    def __init__(self, data_d, default=0):
+        """
+        :param dict data_d: input data
+        :param default: default value to return when the attribute 
+                        is being tried to read
+                        is not a key in the dictionary
+        """
+        self._data_d = data_d
+        self._default = default
+
+
+    def __getattr__(self, attr):
+        """
+        read the values in the dictionary
+        as the keys of the dictionary were
+        attributes of the class.
+        For example, self.foo allows to read 
+        the content of self.data_d['foo'] 
+        """
+        return self._data_d.get(attr, self._default)
+
+
+    def __str__(self):
+        str_l = []
+        for pair in self._data_d.items():
+            s = '%s: %s' %pair
+            str_l.append(s)
+        return ', '.join(str_l)
+
+
+    def __repr__(self):
+        s = str(self)
+        return s
+
