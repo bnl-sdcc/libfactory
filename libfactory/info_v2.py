@@ -205,17 +205,6 @@ class _BaseDict(_Base):
         if type(self.data) is not dict:
             raise IncorrectInputDataType(dict)
 
-
-# extra get methods
-
-class _GetRawBase:
-
-    def getraw(self):
-        return self.data
-
-
-class _GetDictBase:
-
     def getraw(self):
         out = {}
         for key, value in self.data.items():
@@ -231,6 +220,13 @@ class _GetDictBase:
         if key not in self.data.keys():
             raise MissingKey(key)
         return self.data[key]
+
+# extra get methods
+
+class _GetRawBase:
+
+    def getraw(self):
+        return self.data
 
 
 # interfaces 
@@ -459,7 +455,7 @@ class StatusInfo(_BaseList, _AnalysisInterface, _GetRawBase):
 
 # =============================================================================
 
-class _DictStatusInfo(_BaseDict, _AnalysisInterface, _GetDictBase):
+class _DictStatusInfo(_BaseDict, _AnalysisInterface):
 
     # -------------------------------------------------------------------------
     # methods to manipulate the data
@@ -528,7 +524,7 @@ class _DictStatusInfo(_BaseDict, _AnalysisInterface, _GetDictBase):
 class _NonMutableStatusInfo(_Base, _GetRawBase):
     pass
 
-class _NonMutableDictStatusInfo(_BaseDict, _GetDictBase):
+class _NonMutableDictStatusInfo(_BaseDict):
     pass
 
 
