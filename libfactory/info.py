@@ -689,16 +689,16 @@ class MissingKey(Exception):
         return repr(self.value)
 
 
-class IsRawData(Exception):
-    def __init__(self, key):
-        self.value = "Info object is raw. It does not have key %s" %key
+class ObjectIsNotMutable(Exception):
+    def __init__(self, method):
+        self.value = "object is not mutable, method %s can not be invoked anymore" %method
     def __str__(self):
         return repr(self.value)
 
 
-class ObjectIsNotMutable(Exception):
-    def __init__(self, method):
-        self.value = "object is not mutable, method %s can not be invoked anymore" %method
+class IsRawData(Exception):
+    def __init__(self, key):
+        self.value = "Info object is raw. It does not have key %s" %key
     def __str__(self):
         return repr(self.value)
 
