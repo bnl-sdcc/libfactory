@@ -56,9 +56,8 @@ The UML source for the classes is as follows:
         object <|-- _Base
         
         _Base <|-- _BaseDict 
-        _Base <|-- _BaseList
-        
-        _BaseList <|-- StatusInfo 
+        _Base <|-- StatusInfo 
+
         _AnalysisInterface  <|-- StatusInfo  
         _GetRawBase <|-- StatusInfo 
         
