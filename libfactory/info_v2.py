@@ -47,6 +47,30 @@ with data:
                  keyN: <StatusInfo>
                 }
 
+-------------------------------------------------------------------------------
+
+The UML source for the classes is as follows:
+
+        @startuml
+        
+        object <|-- _Base
+        
+        _Base <|-- _BaseDict 
+        _Base <|-- _BaseList
+        
+        _BaseList <|-- StatusInfo 
+        _AnalysisInterface  <|-- StatusInfo  
+        _GetRawBase <|-- StatusInfo 
+        
+        _BaseDict <|-- _DictStatusInfo 
+        _AnalysisInterface <|-- _DictStatusInfo 
+        
+        _Base <|-- _NonMutableStatusInfo 
+        _GetRawBase <|-- _NonMutableStatusInfo 
+        
+        _BaseDict <|-- _NonMutableDictStatusInfo 
+        
+        @enduml
 
 -------------------------------------------------------------------------------
                             Analyzers 
@@ -55,24 +79,26 @@ with data:
 
 The input to all methods is an object of type Analyzer. 
 Analyzers are classes that implement the rules or policies to be used 
-for each method call.  For example: 
-    - a call to method groupby() expect an object of type AnalyzerIndexBy
-    - a call to method map() expect an object of type AnalyzerMap
-    - a call to method reduce() expect an object of type AnalyzerReduce
+for each method call.  
+For example: 
+    - a call to method indexby() expects an object of type AnalyzerIndexBy
+    - a call to method map() expects an object of type AnalyzerMap
+    - a call to method reduce() expects an object of type AnalyzerReduce
     - etc.
 
-Each Analyzer object must implement itself a method with the same name
-that the StatusInfo's method it is intended for. For exmple:
+Each Analyzer object must have implemented a method 
+with the same name that the StatusInfo's method it is intended for. 
+For exmple:
 
-    - class AnalyzerIndexBy must implement method indexby()
-    - class AnalyzerMap must implement method map()
-    - class AnalyzerReduce must implement method reduce()
+    - classes AnalyzerIndexBy must implement method indexby()
+    - classes AnalyzerMap must implement method map()
+    - classes AnalyzerReduce must implement method reduce()
     - ...
 
 Passing an analyzer object that does not implement the right method will 
 raise an IncorrectAnalyzer Exception.
 
-A few basic Analyzers have been implemented, ready to use. 
+A few basic pre-made Analyzers have been implemented, ready to use. 
 """
 
 import datetime
