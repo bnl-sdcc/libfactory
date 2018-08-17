@@ -211,17 +211,6 @@ data={data}, timestamp={timestamp}'
             return data.get(*key_l[1:])
 
 
-class _BaseList(_Base):
-    """
-    adds an extra check for the input data
-    """
-    def __init__(self, data, timestamp=None):
-        super(_BaseList, self).__init__(data, timestamp)
-        print data.__class__.__name__
-        if type(self.data) is not list:
-            raise IncorrectInputDataType(list)
-
-
 class _BaseDict(_Base):
     """
     adds an extra check for the input data
@@ -278,12 +267,11 @@ class _AnalysisInterface:
         raise NotImplementedError
 
 
-
 # =============================================================================
 # Info class
 # =============================================================================
 
-class StatusInfo(_BaseList, _AnalysisInterface, _GetRawBase):
+class StatusInfo(_Base, _AnalysisInterface, _GetRawBase):
 
     def __init__(self, data, timestamp=None):
         super(StatusInfo, self).__init__(data, timestamp)
