@@ -57,17 +57,16 @@ The UML source for the classes is as follows:
         
         _Base <|-- _BaseDict 
         _Base <|-- StatusInfo 
-
-        _AnalysisInterface  <|-- StatusInfo  
-        _GetRawBase <|-- StatusInfo 
-        
-        _BaseDict <|-- _DictStatusInfo 
-        _AnalysisInterface <|-- _DictStatusInfo 
-        
         _Base <|-- _NonMutableStatusInfo 
-        _GetRawBase <|-- _NonMutableStatusInfo 
-        
+
+        _AnalysisInterface <|-- StatusInfo  
+        _AnalysisInterface <|-- _DictStatusInfo 
+
+        _BaseDict <|-- _DictStatusInfo 
         _BaseDict <|-- _NonMutableDictStatusInfo 
+
+        _GetRawBase <|-- StatusInfo 
+        _GetRawBase <|-- _NonMutableStatusInfo 
         
         @enduml
 
