@@ -672,7 +672,7 @@ class TotalRunningTimeFromRunningJobs(AnalyzerReduce):
 
     def __init__(self):
         self.now = int(time.time())
-        super(TotalRunningTime, self).__init__(0)
+        super(TotalRunningTimeFromRunningJobs, self).__init__(0)
 
     def reduce(self, value, job):
         running = self.now - int(job['enteredcurrentstatus'])
@@ -685,7 +685,7 @@ class TotalRunningTimeFromRunningAndFinishedJobs(AnalyzerReduce):
 
     def __init__(self):
         self.now = int(time.time())
-        super(TotalRunningTime2, self).__init__(0)
+        super(TotalRunningTimeFromRunningAndFinishedJobs, self).__init__(0)
 
     def reduce(self, value, job):
         if job['jobstatus'] == 2:
