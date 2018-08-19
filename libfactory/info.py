@@ -790,16 +790,31 @@ class Item(object):
     and read them as they were attributes
     """
 
-    def __init__(self, data_d, default=0):
+    def __init__(self, data_d, default=0, timestamp=None):
         """
         :param dict data_d: input data
         :param default: default value to return when the attribute 
                         is being tried to read
                         is not a key in the dictionary
         """
+        self.log = logging.getLogger('info')
+        self.log.addHandler(logging.NullHandler())
+
+        msg ='Initializing object with input options: \
+data_d={data_d}, default={default}, timestamp={timestamp}'
+        msg = msg.format(data=data,
+                         default=default,
+                         timestamp=timestamp)
+        self.log.debug(msg)
+
         self._data_d = data_d
         self._default = default
-
+        if not timestamp:
+            timestamp = int(time.time())
+            msg = 'Setting timestamp to %s' %timestamp
+            self.log.debug(msg)
+        self.timestamp = timestamp
+            
 
     def __getattr__(self, attr):
         """
