@@ -49,6 +49,7 @@ import logging.handlers
 import os
 import socket
 import subprocess
+import threading
 
 import classad
 import htcondor
@@ -116,8 +117,18 @@ def _address(hostname, port=None):
 #              C O L L E C T O R   &   S C H E D D 
 # =============================================================================
 
+class HTCondorRemoteScheddWrapper(object):
+    """
+    trivial class just to host in a single object 
+      * an htcondor.Schedd() object 
+      * its address 
+    """
+    def __init__(self, schedd, address):
+        self.schedd = schedd
+        self.address = address
 
-class HTCondorCollector(object):
+
+class _HTCondorCollector(object):
 
     def __init__(self, hostname=None, port=None):
         """
@@ -166,7 +177,9 @@ class HTCondorCollector(object):
         address = _address(hostname, port)
         scheddAd = self.collector.locate(htcondor.DaemonTypes.Schedd, address) 
         schedd = htcondor.Schedd(scheddAd)
-        return HTCondorSchedd(schedd)
+        #return HTCondorSchedd(schedd)
+        scheddwrap = HTCondorRemoteScheddWrapper(schedd, address)
+        return HTCondorSchedd(scheddwrap)
 
     # --------------------------------------------------------------------------
 
@@ -191,21 +204,51 @@ class HTCondorCollector(object):
         self.log.debug('out = %s' %out)
         return out
 
-    
-class HTCondorSchedd(object):
 
-    def __init__(self, schedd=None):
+
+class HTCondorCollector(object):
+    """
+    overriding __new__() to make HTCondorCollector a Singleton
+    """
+    instances = {}
+
+    def __new__(cls, hostname=None, port=None):
+
+        if not hostname:
+            address = 'localhost'
+            if not address in HTCondorCollector.instances.keys():
+                HTCondorCollector.instances[address] = _HTCondorCollector()
+        else:
+            address = _address(hostname, port)
+            if not address in HTCondorCollector.instances.keys():
+                HTCondorCollector.instances[address] = _HTCondorCollector(hostname, port)
+ 
+        return HTCondorCollector.instances[address]
+
+
+# =============================================================================
+
+    
+class _HTCondorSchedd(object):
+
+    def __init__(self, scheddwrap=None):
         """
-        :param htcondor.Schedd schedd: [optional] when provided, 
+        :param HTCondorRemoteScheddWrapper scheddwrap: [optional] when provided, 
             the current object is built on it to contact a remote schedd.
             Otherwise, a local schedd is assumed.
         """
         self.log = logging.getLogger('htcondorschedd')
         self.log.addHandler(logging.NullHandler())
-        if schedd:
-            self.schedd = schedd 
+        if scheddwrap:
+            self.schedd = scheddwrap.schedd
+            self.address = scheddwrap.address
         else:
             self.schedd = htcondor.Schedd()  
+            self.address = None
+
+	# Lock object to serialize the submission calls
+	self.lock = threading.Lock() 
+
         self.log.debug('HTCondorSchedd object initialized')
 
 
@@ -313,11 +356,34 @@ class HTCondorSchedd(object):
         if not bool(submit_d):
             raise EmptySubmitFile()
         
+        self.lock.acquire() 
         submit = htcondor.Submit(submit_d)
         with self.schedd.transaction() as txn:
             clusterid = submit.queue(txn, n)
+        self.lock.release() 
         self.log.debug('finished submission for clusterid %s' %clusterid)
         return clusterid
+
+
+class HTCondorSchedd(object):
+    """
+    overriding __new__() to make HTCondorSchedd a Singleton
+    """
+    instances = {}
+
+    def __new__(cls, scheddwrap=None):
+
+        if not scheddwrap:
+            address = 'localhost'
+            if not address in HTCondorSchedd.instances.keys():
+                HTCondorSchedd.instances[address] = _HTCondorSchedd()
+        else:
+            address = scheddwrap.address
+            if not address in HTCondorSchedd.instances.keys():
+                HTCondorSchedd.instances[address] = _HTCondorSchedd(scheddwrap)
+
+        return HTCondorSchedd.instances[address]
+
 
 
 # =============================================================================
