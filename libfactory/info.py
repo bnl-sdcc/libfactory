@@ -784,7 +784,7 @@ class AnalyzerFailure(Exception):
 #   class Itemp
 # =============================================================================
 
-class Item(object):
+class DataItem(object):
     """
     class to store an arbitrary dictionary, 
     and read them as they were attributes
@@ -802,7 +802,7 @@ class Item(object):
 
         msg ='Initializing object with input options: \
 data_d={data_d}, default={default}, timestamp={timestamp}'
-        msg = msg.format(data=data,
+        msg = msg.format(data_d=data_d,
                          default=default,
                          timestamp=timestamp)
         self.log.debug(msg)
