@@ -827,6 +827,23 @@ data_d={data_d}, default={default}, timestamp={timestamp}'
         return self._data_d.get(attr, self._default)
 
 
+    def __setitem__(self, attr, value):
+        """
+        to allow using [] as if this class were actually a dict.
+        :param attr: the key 
+        :param value: the value 
+        """
+        self._data_d[attr] = value
+
+
+    def __getitem__(self, attr):
+        """
+        to allow using [] as if this class were actually a dict.
+        :param attr: the key 
+        """
+        return self.__getattr__(attr)
+
+
     def __str__(self):
         str_l = []
         for pair in self._data_d.items():
