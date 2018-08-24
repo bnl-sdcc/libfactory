@@ -38,7 +38,7 @@ class schedulermanager(self):
         try:
             for scheduler in self.scheduler_l:
                 n = scheduler.calculate(n)
-        except Exception, ex:
+        except Exception as ex:
             self.log.debug('an exception has been caught: %s. Aborting.' %ex)
             raise ex
         else:

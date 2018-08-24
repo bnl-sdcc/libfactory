@@ -175,7 +175,7 @@ def catch_exception(method):
     def wrapper(self, analyzer):
         try:
             out = method(self, analyzer)
-        except Exception, ex:
+        except Exception as ex:
             msg = 'Exception of type "%s" ' %ex.__class__.__name__
             msg += 'with content "%s" ' %ex
             msg += 'while calling "%s" ' %method.__name__
@@ -636,7 +636,7 @@ class IndexByKey(AnalyzerIndexBy):
     def indexby(self, job):
         try:
             return job[self.key]
-        except Exception, ex:
+        except Exception:
             return None
 
 
@@ -649,7 +649,7 @@ class IndexByKeyRemap(AnalyzerIndexBy):
     def indexby(self, job):
         try:
             value = str(job[self.key])
-        except Exception, ex:
+        except Exception:
             return None
 
         if value in self.mapping_d.keys():
