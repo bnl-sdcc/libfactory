@@ -790,7 +790,7 @@ class DataItem(object):
     and read them as they were attributes
     """
 
-    def __init__(self, data_d, default=0, timestamp=None):
+    def __init__(self, data_d={}, default=0, timestamp=None):
         """
         :param dict data_d: input data
         :param default: default value to return when the attribute 
