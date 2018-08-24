@@ -152,10 +152,10 @@ class _HTCondorCollector(object):
         else:
             collector = htcondor.Collector()
             self.log.debug('got local collector')
+        self.__validate_collector(collector)
         return collector
 
 
-    # FIXME: right now this is orphan code
     def __validate_collector(self, collector):
         """
         checks if the collector is reachable
@@ -176,8 +176,11 @@ class _HTCondorCollector(object):
         """
         address = _address(hostname, port)
         scheddAd = self.collector.locate(htcondor.DaemonTypes.Schedd, address) 
-        schedd = htcondor.Schedd(scheddAd)
-        #return HTCondorSchedd(schedd)
+        try:
+            schedd = htcondor.Schedd(scheddAd)
+        except Exception as ex:
+            self.log.critical('Unable to instantiate an Schedd object')
+            raise ScheddNotReachable()
         scheddwrap = HTCondorRemoteScheddWrapper(schedd, address)
         return HTCondorSchedd(scheddwrap)
 
@@ -243,24 +246,26 @@ class _HTCondorSchedd(object):
             self.schedd = scheddwrap.schedd
             self.address = scheddwrap.address
         else:
-            self.schedd = htcondor.Schedd()  
             self.address = None
+            try:
+                self.schedd = htcondor.Schedd()  
+            except Exception as ex:
+                self.log.critical('Unable to instantiate an Schedd object')
+                raise ScheddNotReachable()
 	    # Lock object to serialize the submission and query calls
 	    self.lock = threading.Lock() 
-
         self.log.debug('HTCondorSchedd object initialized')
 
 
-    # FIXME: right now this is orphan code
-    def __validate_schedd(self, schedd):
-        """
-        checks if the schedd is reachable
-        """
-        try:
-            # should return an "empty" iterator if Schedd exists
-            schedd.xquery(limit = 0)
-        except Exception:
-            raise ScheddNotReachable()
+#    def __validate_schedd(self, schedd):
+#        """
+#        checks if the schedd is reachable
+#        """
+#        try:
+#            # should return an "empty" iterator if Schedd exists
+#            schedd.xquery(limit = 0)
+#        except Exception:
+#            raise ScheddNotReachable()
 
     # --------------------------------------------------------------------------
 
