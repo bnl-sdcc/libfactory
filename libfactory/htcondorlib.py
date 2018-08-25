@@ -140,6 +140,8 @@ class _HTCondorCollector(object):
         self.hostname = hostname
         self.port = port  
         self.collector = self.__getcollector()
+	    # Lock object to serialize the submission and query calls
+	    self.lock = threading.Lock() 
         self.log.debug('HTCondorCollector object initialized')
 
 
@@ -203,7 +205,9 @@ class _HTCondorCollector(object):
         self.log.debug('list of attributes in the query = %s' %attribute_l)
         self.log.debug('list of constraints in the query = %s' %constraint_l)
         constraint_str = _build_constraint_str(constraint_l)
+        self.lock.acquire()
         out = self.collector.query(htcondor.AdTypes.Startd, constraint_str, attribute_l)
+        self.lock.release()
         self.log.debug('out = %s' %out)
         return out
 
