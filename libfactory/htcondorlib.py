@@ -424,6 +424,10 @@ class JobSubmissionDescription(object):
         try:
             with open(path) as f:
                 self.loads(f.read())
+        except MalformedSubmitFile as ex:
+            raise ex 
+        except EmptySubmitFile as ex:
+            raise ex 
         except Exception as ex:
             self.log.error('file %s cannot be read' %path)
             raise ErrorReadingSubmitFile(path)
@@ -435,7 +439,7 @@ class JobSubmissionDescription(object):
         :param str jsd_str: single string with the submission content
         """
         self.log.debug('starting')
-        for line in jdl_str.split('\n'):
+        for line in jsd_str.split('\n'):
             if line.startswith('queue '):
                 # the "queue" statement should not be part of the
                 # submit file string, but it is harmless
@@ -475,8 +479,8 @@ class JobSubmissionDescription(object):
         """
         str = ""
         for pair in self._jsd_d.items():
-            str += '% = %\n' %pair
-        str = += 'queue %s' %self._n
+            str += '%s = %s\n' %pair
+        str += 'queue %s\n' %self._n
         return str
 
 
