@@ -335,7 +335,9 @@ class _HTCondorSchedd(object):
         """
         self.log.debug('starting')
         self.log.debug('list of jobs to kill = %s' %jobid_l)
+        self.lock.acquire()
         self.schedd.act(htcondor.JobAction.Remove, jobid_l)
+        self.lock.release()
         self.log.debug('finished')
     
 
@@ -397,6 +399,122 @@ class HTCondorSchedd(object):
         return HTCondorSchedd.instances[address]
 
 
+# =============================================================================
+
+class JobSubmissionDescription(object):
+    """
+    class to manage the content of the submission file,
+    or its equivalent in several formats
+    """
+
+    def __init__(self):
+        """
+        _jsd_d is a dictionary of submission file expressions
+        _n is the number of jobs to submit
+        """
+        self._jsd_d = {}
+        self._n = 0
+
+
+    def loadf(self, path):
+        """
+        gets the submission content from a file
+        :param str path: path to the submission file
+        """
+        try:
+            with open(path) as f:
+                self.loads(f.read())
+        except Exception as ex:
+            self.log.error('file %s cannot be read' %path)
+            raise ErrorReadingSubmitFile(path)
+
+
+    def loads(self, jsd_str):
+        """
+        gets the submission content from a string
+        :param str jsd_str: single string with the submission content
+        """
+        self.log.debug('starting')
+        for line in jdl_str.split('\n'):
+            if line.startswith('queue '):
+                # the "queue" statement should not be part of the
+                # submit file string, but it is harmless
+                continue
+            if line.strip() == '':
+                continue
+            try:
+                fields = line.split('=')
+                key = fields[0].strip()
+                value = '='.join(fields[1:]).strip()
+                self.add(key, value)
+            except Exception:
+                raise MalformedSubmitFile(line)
+        self.log.debug('dictionary for submission = %s' %self._jsd_d)
+        if not bool(self._jsd_d):
+            raise EmptySubmitFile()
+
+
+    def dumpf(self, path):
+        """
+        write the submission content into a file
+        :param str path: path to the file
+        """
+        str = self.dumps()
+        try:
+            with  open(path, "w") as f:
+                f.write(str)
+        except Exception as ex:
+            self.log.error('file %s cannot be written' %path)
+            raise ErrorWritingSubmitFile(path)
+
+
+    def dumps(self):
+        """
+        returns the submission content as a single string
+        :rtype str:
+        """
+        str = ""
+        for pair in self._jsd_d.items():
+            str += '% = %\n' %pair
+        str = += 'queue %s' %self._n
+        return str
+
+
+    def add(self, key, value):
+        """
+        adds a new key,value pair submission expression
+        to the dictionary
+        :param str key: the submission expression key
+        :param str value: the submission expression value
+        """
+        self._jsd_d[key] = value
+
+
+    def setnjobs(self, n):
+        """
+        sets the number of jobs to submit
+        :param int n: the number of jobs to submit
+        """
+        if n<0:
+            raise NegativeSubmissionNumber(n)
+        self._n = n
+
+
+    def items(self):
+        """
+        returns the content as a dict of submission items
+        :rtype dict:
+        """
+        return self._jsd_d
+
+
+    def getnjobs(self):
+        """
+        returns the number of jobs to submit
+        :rtype int:
+        """
+        return self._n
+
 
 # =============================================================================
 #   Exceptions
@@ -432,4 +550,20 @@ class IncorrectInputType(Exception):
     def __str__(self):
         return repr(self.value)
 
+class NegativeSubmissionNumber(Exception):
+    def __init__(self, value):
+        self.value = "Negative number of jobs to submit: %s" %value
+    def __str__(self):
+        return repr(self.value)
 
+class ErrorReadingSubmitFile(Exception):
+    def __init__(self, value):
+        self.value = "Unable to read the submit file %s" %value
+    def __str__(self):
+        return repr(self.value)
+
+class ErrorWritingSubmitFile(Exception):
+    def __init__(self, value):
+        self.value = "Unable to write the submit file %s" %value
+    def __str__(self):
+        return repr(self.value)
