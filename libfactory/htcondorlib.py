@@ -141,7 +141,7 @@ class _HTCondorCollector(object):
         self.port = port  
         self.collector = self.__getcollector()
 	    # Lock object to serialize the submission and query calls
-	    self.lock = threading.Lock() 
+        self.lock = threading.Lock() 
         self.log.debug('HTCondorCollector object initialized')
 
 
@@ -412,6 +412,8 @@ class JobSubmissionDescription(object):
         _jsd_d is a dictionary of submission file expressions
         _n is the number of jobs to submit
         """
+        self.log = logging.getLogger('jobsubmissiondescription')
+        self.log.addHandler(logging.NullHandler())
         self._jsd_d = {}
         self._n = 0
 
