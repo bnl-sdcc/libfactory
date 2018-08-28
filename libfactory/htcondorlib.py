@@ -140,7 +140,7 @@ class _HTCondorCollector(object):
         self.hostname = hostname
         self.port = port  
         self.collector = self.__getcollector()
-	    # Lock object to serialize the submission and query calls
+        # Lock object to serialize the submission and query calls
         self.lock = threading.Lock() 
         self.log.debug('HTCondorCollector object initialized')
 
@@ -256,8 +256,8 @@ class _HTCondorSchedd(object):
             except Exception as ex:
                 self.log.critical('Unable to instantiate an Schedd object')
                 raise ScheddNotReachable()
-	    # Lock object to serialize the submission and query calls
-	    self.lock = threading.Lock() 
+        # Lock object to serialize the submission and query calls
+        self.lock = threading.Lock() 
         self.log.debug('HTCondorSchedd object initialized')
 
 
