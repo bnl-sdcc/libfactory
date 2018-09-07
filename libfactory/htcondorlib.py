@@ -341,40 +341,28 @@ class _HTCondorSchedd(object):
         self.log.debug('finished')
     
 
-    def condor_submit(self, jdl_str, n):
+    def condor_submit(self, jsd, n):
         """
         performs job submission from a string representation 
         of the submit file. The string containing the submit file should not
         contain the "queue" statement, as the number of jobs is being passed
         as a separate argument.
-        :param str jdl_str: single string with the content of the submit file
+        :param JobSubmissionDescription jsd: instance of JobSubmissionDescription 
         :param int n: number of jobs to submit
         """
         self.log.debug('starting')
-        submit_d = {}
-        for line in jdl_str.split('\n'):
-            if line.startswith('queue '):
-                # the "queue" statement should not be part of the 
-                # submit file string, but it is harmless 
-                continue 
-            if line.strip() == '':
-                continue
-            try:
-                fields = line.split('=')
-                key = fields[0].strip()
-                value = '='.join(fields[1:]).strip()
-                submit_d[key] = value
-            except Exception:
-                raise MalformedSubmitFile(line)
+    
+        submit_d = jsd.items()
         self.log.debug('dictionary for submission = %s' %submit_d)
         if not bool(submit_d):
             raise EmptySubmitFile()
-        
-        self.lock.acquire() 
+    
+        self.lock.acquire()
         submit = htcondor.Submit(submit_d)
         with self.schedd.transaction() as txn:
             clusterid = submit.queue(txn, n)
-        self.lock.release() 
+        self.lock.release()
+    
         self.log.debug('finished submission for clusterid %s' %clusterid)
         return clusterid
 
