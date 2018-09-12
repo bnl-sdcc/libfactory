@@ -9,6 +9,9 @@ import sys
 from ConfigParser import ConfigParser
 import StringIO
 
+from libfactory.info import StatusInfo
+
+
 
 class NotImplementedException(Exception):
     pass
@@ -16,16 +19,17 @@ class NotImplementedException(Exception):
 
 class QTreeNode(object):
     '''
+    Common code for any Tree Node. 
     
     '''
     def submit(self, n):
-        pass
+        raise NotImplementedException()
 
     def getInfo(self):
-        pass    
+        raise NotImplementedException()    
     
     def isFull(self):
-        return False
+        raise NotImplementedException()
 
     def __repr__(self):
         s =""
@@ -63,7 +67,20 @@ class LBQueue(QTreeNode):
         
     
     def submit(self, n):
-        pass   
+        tosub = n / len(self.children)
+        for ch in self.children:
+            self.log.debug("Submitting %s to %s" % (tosub, ch.section))
+            ch.submit(tosub)
+
+    def isFull(self):
+        '''
+        Queue is only full if ALL children are full. 
+        '''
+        full = True
+        for ch in self.children:
+            if not ch.isFull():
+                full = False
+        return full
     
 
 class OFQueue(QTreeNode):
@@ -84,7 +101,20 @@ class OFQueue(QTreeNode):
 
 
     def submit(self, n):
-        pass
+        for ch in self.children:
+            if not ch.isFull():
+                self.log.debug("Submitting %s to %s" % (n, ch.section))
+                ch.submit(n)
+
+    def isFull(self):
+        '''
+        Queue is only full if ALL children are full. 
+        '''
+        full = True
+        for ch in self.children:
+            if not ch.isFull():
+                full = False
+        return full
 
 
 class SubmitQueue(QTreeNode):
@@ -93,8 +123,28 @@ class SubmitQueue(QTreeNode):
         self.config = config
         self.section = section
         self.parent = None
+        self.batchpluginname = config.get(section, 'batchplugin')
+        bp = getattr(sys.modules[__name__], self.batchpluginname)
+        bpo = bp(config, section)
+        self.log.debug("Set batchplugin to %s" % bpo)
+        self.batchplugin = bpo
         self.childlist = []
         self.children = []
+    
+    def submit(self, n):
+        self.batchplugin.submit(n, label=self.section)
+       
+    def isFull(self):
+        '''
+        q is full if pending > 10
+        '''
+        full = False
+        info = self.batchplugin.getInfo()
+        #pending = info[self.section]['idle']
+        #if pending > 10:
+        #    full = True
+        return full
+
 
 
 
@@ -137,39 +187,67 @@ class QueuesFactory(object):
 
                     
         
-    def getFinalQueueList(self):
-        pass
+    def getRootList(self):
+        return self.rootlist
     
 
 
 class MockBatchPlugin(object):
+    '''
+    Programmable mock batch plugin so behavior can be repeatable for testing.    
+    '''
 
     instance = None
     
-    def __init__(self):
-        if instance is not None:
-            return instance
-        else:
+    def __new__(cls, *k, **kw):
+        if MockBatchPlugin.instance is None:
+            logging.debug("Making new MockBatchPlugin object...")
+            MockBatchPlugin.instance = MockBatchPluginImpl(*k, **kw)          
+        return MockBatchPlugin.instance
+
+
+class MockBatchPluginImpl(object):
+        
+    def __init__(self, config, section):
+            self.log = logging.getLogger()
+            self.config = config
+            self.section = section
             self.log = logging.getLogger()
             self.batchinfo = {}
     
     def process(self):
         '''
-        Go through all idle jobs at various sites and decide which to run or complete. 
+        Go through all idle jobs at various labels and decide which to run or complete. 
         '''
         pass
+    
        
     def submit(self, n, label=None):
+        self.log.debug("Getting %s jobs with label %s" % (n, label))
         if label == None:
             pass
         else:
-            self.batchinfo[label]['idle'] += n
+            try:
+                self.batchinfo[label]['idle'] += n
+            except KeyError:
+                self.batchinfo[label] = {}
+                self.batchinfo[label]['idle'] = n
+                self.batchinfo[label]['running'] = 0
+                self.batchinfo[label]['complete'] = 0
             
 
     def getInfo(self):
-        pass
+        return self.batchinfo
 
-
+    def __repr__(self):
+        s = ''
+        for target in self.batchinfo.keys():
+            s += '[%s] idle=%s running=%s complete=%s ' % (target, 
+                                                           self.batchinfo[target]['idle'],
+                                                           self.batchinfo[target]['running'],
+                                                           self.batchinfo[target]['complete'],
+                                                           )
+        return s
 
 
 def test():
@@ -177,32 +255,52 @@ def test():
     config = '''[DEFAULT]
 [DEFAULT]
 childlist = None
+maxtransferpercycle = 5
+minpending = 2
+batchplugin = None
 
 
-[ofroot1]
-klass = OFQueue
-childlist = lbnode1, subthree
+
+[lbroot1]
+klass = LBQueue
+childlist = lbnode1, ofnode1, subE
 root = True
 
 [lbnode1]
 klass = LBQueue
-childlist = subone, subtwo
+childlist = subC, subD
 
-[subone]
+[ofnode1]
+klass = OFQueue
+childlist = subA, subB
+
+
+[subA]
 klass = SubmitQueue
 batchplugin = MockBatchPlugin
 
-[subtwo]
+[subB]
 klass = SubmitQueue
 batchplugin = MockBatchPlugin
 
-[subthree]
+[subC]
+klass = SubmitQueue
+batchplugin = MockBatchPlugin
+
+[subD]
+klass = SubmitQueue
+batchplugin = MockBatchPlugin
+
+[subE]
 klass = SubmitQueue
 batchplugin = MockBatchPlugin
 
 '''
     qf = QueuesFactory(config)
-
+    rl = qf.getRootList()
+    for qo in rl:
+        qo.submit(40)
+    
 
 
     
