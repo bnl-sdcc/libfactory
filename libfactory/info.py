@@ -506,6 +506,7 @@ class StatusInfo(_Base, _AnalysisInterface, _GetRawBase):
     #
     def update(self, analyzer):
         self.log.debug('Starting with analyzer %s' %analyzer)
+        self.timestamp = int(time.time())
         self.data = analyzer.update(self.data)
 
 
