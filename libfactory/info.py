@@ -504,6 +504,7 @@ class StatusInfo(_Base, _AnalysisInterface, _GetRawBase):
     # FIXME : untested code 
     #
     def update(self, analyzer):
+        self.log.debug('Starting with analyzer %s' %analyzer)
         self.data = analyzer.update(self.data)
 
 
