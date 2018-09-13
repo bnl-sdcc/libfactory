@@ -574,14 +574,6 @@ class _DictStatusInfo(_BaseDict, _AnalysisInterface):
         new_info = _NonMutableDictStatusInfo(new_data, timestamp=self.timestamp)
         return new_info
 
-    #
-    # FIXME : untested code 
-    #
-    def update(self, analyzer):
-        for key, statusinfo in self.data.items():
-            statusinfo.update(analyzer)
-
-
 
 class _NonMutableStatusInfo(_Base, _GetRawBase):
     pass
