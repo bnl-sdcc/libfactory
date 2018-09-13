@@ -326,6 +326,11 @@ class StatusInfo(_Base, _AnalysisInterface, _GetRawBase):
             return self.transform(analyzer)
         elif analyzer.analyzertype == 'process':
             return self.process(analyzer)
+        # 
+        # FIXME untested code
+        #
+        elif analyzer.analyzertype == 'update':
+            return self.update(analyzer)
         else:
             msg = 'Input object %s is not a valid analyzer. Raising exception.'
             self.log.error(msg)
@@ -492,6 +497,16 @@ class StatusInfo(_Base, _AnalysisInterface, _GetRawBase):
         new_data = analyzer.process(self.data)
         return new_data
 
+
+    # -------------------------------------------------------------------------
+
+    #
+    # FIXME : untested code 
+    #
+    def update(self, analyzer):
+        self.data = analyzer.update(self.data)
+
+
 # =============================================================================
 
 class _DictStatusInfo(_BaseDict, _AnalysisInterface):
@@ -559,6 +574,14 @@ class _DictStatusInfo(_BaseDict, _AnalysisInterface):
         new_info = _NonMutableDictStatusInfo(new_data, timestamp=self.timestamp)
         return new_info
 
+    #
+    # FIXME : untested code 
+    #
+    def update(self, analyzer):
+        for key, statusinfo in self.data.items():
+            statusinfo.update(analyzer)
+
+
 
 class _NonMutableStatusInfo(_Base, _GetRawBase):
     pass
@@ -604,6 +627,12 @@ class AnalyzerReduce(Analyzer):
 class AnalyzerProcess(Analyzer):
     analyzertype = "process"
     def process(self):
+        raise NotImplementedError
+
+ 
+class AnalyzerUpdate(Analyzer):
+    analyzertype = "update"
+    def update(self):
         raise NotImplementedError
 
 
