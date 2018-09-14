@@ -121,8 +121,42 @@ For exmple:
     - classes AnalyzerReduce must implement method reduce()
     - ...
 
+The exception to this rule is methods whose name ends with  "_in_place".
+In those cases, they expect an Analyzer class implementing a method with 
+a name that does not contain the string "_in_place":
+    - method map_in_place() expects an Analyzer implementing method map()
+    - method filter_in_place() expects an Analyzer implementing method filter()
+    - method transform_in_place() expects an Analyzer implementing method transform()
+
+
 Passing an analyzer object that does not implement the right method will 
 raise an IncorrectAnalyzer Exception.
+
+Implementation of an indexby() method:
+    - the input is an individual item from the list of data objects being analyzed
+    - the output is the key under which this item will belong in the aggregated object
+
+Implementation of a map() method:
+    - the input is an individual item from the list of data objects being analyzed
+    - the output is the modified item 
+
+Implementation of a filter() method:
+    - the input is an individual item from the list of data objects being analyzed
+    - the output is a boolean indicating if the item should be kept or not
+
+Implementation of a reduce() method:
+    - the input is an individual item from the list of data objects being analyzed
+    - the output is the aggregated result of analyzing the item and the previous value,
+      which is being stored in a class attribute
+
+Implementation of a transform() method:
+    - the input is the entire list of data objects
+    - the output is a new list of data object
+
+Implementation of a process() method:
+    - the input is the entire list of data objects
+    - the output can be anything
+
 
 A few basic pre-made Analyzers have been implemented, ready to use. 
 """
