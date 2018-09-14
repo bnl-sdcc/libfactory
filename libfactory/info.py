@@ -327,11 +327,6 @@ class StatusInfo(_Base, _AnalysisInterface, _GetRawBase):
             return self.transform(analyzer)
         elif analyzer.analyzertype == 'process':
             return self.process(analyzer)
-        # 
-        # FIXME untested code
-        #
-        elif analyzer.analyzertype == 'update':
-            return self.update(analyzer)
         else:
             msg = 'Input object %s is not a valid analyzer. Raising exception.'
             self.log.error(msg)
@@ -403,6 +398,20 @@ class StatusInfo(_Base, _AnalysisInterface, _GetRawBase):
         new_info = StatusInfo(new_data, timestamp=self.timestamp)
         return new_info
 
+
+    @validate_call
+    def map_in_place(self, analyzer):
+        """
+        modifies, in place, each item in self.data according to rules
+        in analyzer
+        :param analyzer: an instance of AnalyzerMap-type class 
+                         implementing method map()
+        """
+        self.log.debug('Starting with analyzer %s' %analyzer)
+        self.data = self.__map(analyzer)
+        self.timestamp = int(time.time())
+
+
     @catch_exception
     def __map(self, analyzer):
         new_data = []
@@ -410,7 +419,8 @@ class StatusInfo(_Base, _AnalysisInterface, _GetRawBase):
             new_item = analyzer.map(item)
             new_data.append(new_item)
         return new_data
-    
+
+
     # -------------------------------------------------------------------------
 
     @validate_call
@@ -426,6 +436,20 @@ class StatusInfo(_Base, _AnalysisInterface, _GetRawBase):
         new_data = self.__filter(analyzer)
         new_info = StatusInfo(new_data, timestamp=self.timestamp)
         return new_info
+
+
+    @validate_call
+    def filter_in_place(self, analyzer):
+        """
+        eliminates, in place, the items in self.data that do not pass
+        the filter implemented in analyzer
+        :param analyzer: an instance of AnalyzerFilter-type class 
+                         implementing method filter()
+        """
+        self.log.debug('Starting with analyzer %s' %analyzer)
+        self.data = self.__filter(analyzer)
+        self.timestamp = int(time.time())
+
 
     @catch_exception
     def __filter(self, analyzer):
@@ -472,7 +496,20 @@ class StatusInfo(_Base, _AnalysisInterface, _GetRawBase):
         new_data = self.__transform(analyzer)
         new_info = StatusInfo(new_data, timestamp=self.timestamp)
         return new_info
+
+
+    @validate_call
+    def transform_in_place(self, analyzer):
+        """
+        process, in place, the entire self.data at the raw level
+        :param analyzer: an instance of AnalyzerTransform-type class 
+                         implementing method transform()
+        """
+        self.log.debug('Starting with analyzer %s' %analyzer)
+        self.data = self.__transform(analyzer)
+        self.timestamp = int(time.time())
         
+
     @catch_exception
     def __transform(self, analyzer):
         new_data = analyzer.transform(self.data)
@@ -499,15 +536,15 @@ class StatusInfo(_Base, _AnalysisInterface, _GetRawBase):
         return new_data
 
 
-    # -------------------------------------------------------------------------
-
-    #
-    # FIXME : untested code 
-    #
-    def update(self, analyzer):
-        self.log.debug('Starting with analyzer %s' %analyzer)
-        self.timestamp = int(time.time())
-        self.data = analyzer.update(self.data)
+###    # -------------------------------------------------------------------------
+###
+###    #
+###    # FIXME : untested code 
+###    #
+###    def update(self, analyzer):
+###        self.log.debug('Starting with analyzer %s' %analyzer)
+###        self.timestamp = int(time.time())
+###        self.data = analyzer.update(self.data)
 
 
 # =============================================================================
