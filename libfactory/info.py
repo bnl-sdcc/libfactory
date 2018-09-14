@@ -440,6 +440,7 @@ class StatusInfo(_Base, _AnalysisInterface, _GetRawBase):
         in analyzer
         :param analyzer: an instance of AnalyzerMap-type class 
                          implementing method map()
+        :rtype StatusInfo: self
         """
         self.log.debug('Starting with analyzer %s' %analyzer)
         self.data = self.__map(analyzer)
@@ -480,6 +481,7 @@ class StatusInfo(_Base, _AnalysisInterface, _GetRawBase):
         the filter implemented in analyzer
         :param analyzer: an instance of AnalyzerFilter-type class 
                          implementing method filter()
+        :rtype StatusInfo: self
         """
         self.log.debug('Starting with analyzer %s' %analyzer)
         self.data = self.__filter(analyzer)
@@ -540,6 +542,7 @@ class StatusInfo(_Base, _AnalysisInterface, _GetRawBase):
         process, in place, the entire self.data at the raw level
         :param analyzer: an instance of AnalyzerTransform-type class 
                          implementing method transform()
+        :rtype StatusInfo: self
         """
         self.log.debug('Starting with analyzer %s' %analyzer)
         self.data = self.__transform(analyzer)
