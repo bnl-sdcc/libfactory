@@ -317,10 +317,10 @@ class StatusInfo(_Base, _AnalysisInterface, _GetRawBase):
         self.log.debug('Starting')
         if analyzer.analyzertype == 'indexby':
             return self.indexby(analyzer)
-        elif analyzer.analyzertype == 'filter':
-            return self.filter(analyzer)
         elif analyzer.analyzertype == 'map':
             return self.map(analyzer)
+        elif analyzer.analyzertype == 'filter':
+            return self.filter(analyzer)
         elif analyzer.analyzertype == 'reduce':
             return self.reduce(analyzer)
         elif analyzer.analyzertype == 'transform':
@@ -410,6 +410,7 @@ class StatusInfo(_Base, _AnalysisInterface, _GetRawBase):
         self.log.debug('Starting with analyzer %s' %analyzer)
         self.data = self.__map(analyzer)
         self.timestamp = int(time.time())
+        return self
 
 
     @catch_exception
@@ -449,6 +450,7 @@ class StatusInfo(_Base, _AnalysisInterface, _GetRawBase):
         self.log.debug('Starting with analyzer %s' %analyzer)
         self.data = self.__filter(analyzer)
         self.timestamp = int(time.time())
+        return self
 
 
     @catch_exception
@@ -508,6 +510,7 @@ class StatusInfo(_Base, _AnalysisInterface, _GetRawBase):
         self.log.debug('Starting with analyzer %s' %analyzer)
         self.data = self.__transform(analyzer)
         self.timestamp = int(time.time())
+        return self
         
 
     @catch_exception
@@ -662,10 +665,10 @@ class AnalyzerProcess(Analyzer):
         raise NotImplementedError
 
  
-class AnalyzerUpdate(Analyzer):
-    analyzertype = "update"
-    def update(self):
-        raise NotImplementedError
+#class AnalyzerUpdate(Analyzer):
+#    analyzertype = "update"
+#    def update(self):
+#        raise NotImplementedError
 
 
 class Algorithm(object):
