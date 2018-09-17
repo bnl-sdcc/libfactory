@@ -60,6 +60,10 @@ import htcondor
 # =============================================================================
 
 def condor_version():
+    """
+    output is like
+        '$CondorVersion: 8.6.12 Jul 31 2018 BuildID: 446077 $'
+    """
     return htcondor.version()
 
 
@@ -341,6 +345,8 @@ class _HTCondorSchedd(object):
         self.log.debug('finished')
     
 
+    # --------------------------------------------------------------------------
+
     def condor_submit(self, jsd, n):
         """
         performs job submission from a string representation 
@@ -349,22 +355,67 @@ class _HTCondorSchedd(object):
         as a separate argument.
         :param JobSubmissionDescription jsd: instance of JobSubmissionDescription 
         :param int n: number of jobs to submit
+        :return int: the clusterid of jobs submitted
         """
         self.log.debug('starting')
-    
+
         submit_d = jsd.items()
         self.log.debug('dictionary for submission = %s' %submit_d)
         if not bool(submit_d):
             raise EmptySubmitFile()
-    
-        self.lock.acquire()
+
+        self.lock.acquire() 
+        clusterid = self.__submit(jsd, n)
+        self.lock.release() 
+
+        self.log.debug('finished submission for clusterid %s' %clusterid)
+        return clusterid
+
+
+    def __submit(self, jsd, n):
+        """
+        :param JobSubmissionDescription jsd: instance of JobSubmissionDescription 
+        :param int n: number of jobs to submit
+        :return int: the clusterid of jobs submitted
+        """
+        version = condor_version()
+        version_num = version.split()[1]
+        if version_num >= '8.7': 
+            clusterid = self.__submit_python(jsd, n)
+        else:
+            clusterid = self.__submit_from_file(jsd)
+        return clusterid
+
+
+    def __submit_python(self, jsd, n):
+        """
+        submit using the python bindings
+        :param JobSubmissionDescription jsd: instance of JobSubmissionDescription 
+        :param int n: number of jobs to submit
+        :return int: the clusterid of jobs submitted
+        """
+        submit_d = jsd.items()
         submit = htcondor.Submit(submit_d)
         with self.schedd.transaction() as txn:
             clusterid = submit.queue(txn, n)
-        self.lock.release()
-    
-        self.log.debug('finished submission for clusterid %s' %clusterid)
         return clusterid
+
+
+    def __submit_from_file(self, jsd):
+        """
+        temporary solution to submit in a subshell from submit file
+        :param JobSubmissionDescription jsd: instance of JobSubmissionDescription 
+        :return int: the clusterid of jobs submitted
+        """
+        cmd = 'condor_submit -verbose %s' %jsd.path
+        subproc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        (out, err) = subproc.communicate()
+        st = subproc.returncode
+
+        for line in out.split('\n'):
+            if line.strip().startswith('**'):
+                procid = line.split()[-1].split('.')[0]
+        return int(procid) 
 
 
 class HTCondorSchedd(object):
