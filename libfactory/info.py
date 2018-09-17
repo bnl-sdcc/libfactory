@@ -121,13 +121,6 @@ For exmple:
     - classes AnalyzerReduce must implement method reduce()
     - ...
 
-The exception to this rule is methods whose name ends with  "_in_place".
-In those cases, they expect an Analyzer class implementing a method with 
-a name that does not contain the string "_in_place":
-    - method map_in_place() expects an Analyzer implementing method map()
-    - method filter_in_place() expects an Analyzer implementing method filter()
-    - method transform_in_place() expects an Analyzer implementing method transform()
-
 
 Passing an analyzer object that does not implement the right method will 
 raise an IncorrectAnalyzer Exception.
@@ -433,21 +426,6 @@ class StatusInfo(_Base, _AnalysisInterface, _GetRawBase):
         return new_info
 
 
-    @validate_call
-    def map_in_place(self, analyzer):
-        """
-        modifies, in place, each item in self.data according to rules
-        in analyzer
-        :param analyzer: an instance of AnalyzerMap-type class 
-                         implementing method map()
-        :rtype StatusInfo: self
-        """
-        self.log.debug('Starting with analyzer %s' %analyzer)
-        self.data = self.__map(analyzer)
-        self.timestamp = int(time.time())
-        return self
-
-
     @catch_exception
     def __map(self, analyzer):
         new_data = []
@@ -472,21 +450,6 @@ class StatusInfo(_Base, _AnalysisInterface, _GetRawBase):
         new_data = self.__filter(analyzer)
         new_info = StatusInfo(new_data, timestamp=self.timestamp)
         return new_info
-
-
-    @validate_call
-    def filter_in_place(self, analyzer):
-        """
-        eliminates, in place, the items in self.data that do not pass
-        the filter implemented in analyzer
-        :param analyzer: an instance of AnalyzerFilter-type class 
-                         implementing method filter()
-        :rtype StatusInfo: self
-        """
-        self.log.debug('Starting with analyzer %s' %analyzer)
-        self.data = self.__filter(analyzer)
-        self.timestamp = int(time.time())
-        return self
 
 
     @catch_exception
@@ -536,20 +499,6 @@ class StatusInfo(_Base, _AnalysisInterface, _GetRawBase):
         return new_info
 
 
-    @validate_call
-    def transform_in_place(self, analyzer):
-        """
-        process, in place, the entire self.data at the raw level
-        :param analyzer: an instance of AnalyzerTransform-type class 
-                         implementing method transform()
-        :rtype StatusInfo: self
-        """
-        self.log.debug('Starting with analyzer %s' %analyzer)
-        self.data = self.__transform(analyzer)
-        self.timestamp = int(time.time())
-        return self
-        
-
     @catch_exception
     def __transform(self, analyzer):
         new_data = analyzer.transform(self.data)
@@ -574,17 +523,6 @@ class StatusInfo(_Base, _AnalysisInterface, _GetRawBase):
     def __process(self, analyzer):
         new_data = analyzer.process(self.data)
         return new_data
-
-
-###    # -------------------------------------------------------------------------
-###
-###    #
-###    # FIXME : untested code 
-###    #
-###    def update(self, analyzer):
-###        self.log.debug('Starting with analyzer %s' %analyzer)
-###        self.timestamp = int(time.time())
-###        self.data = analyzer.update(self.data)
 
 
 # =============================================================================
@@ -700,12 +638,6 @@ class AnalyzerProcess(Analyzer):
     analyzertype = "process"
     def process(self):
         raise NotImplementedError
-
- 
-#class AnalyzerUpdate(Analyzer):
-#    analyzertype = "update"
-#    def update(self):
-#        raise NotImplementedError
 
 
 class Algorithm(object):
