@@ -74,27 +74,28 @@ The UML source for the classes is as follows:
                                                             +--------+      
                                                             | object |
                                                             +--------+
-                                                               ^
-                                                               |
+                                                                ^
+                                                                |
  +--------------------+                                     +-------+
  | _AnalysisInterface |    +------------------------------->| _Base |<-----------------+                  
  +--------------------+    |                                +-------+                  |
-   ^                ^      |        +-------------+              ^              +-----------+              
-   |                |      |        | _GetRawBase |              |              | _BaseDict |       
-   |                |      |        +-------------+              |              +-----------+      
-   |                |      |          ^        ^                 |                ^      ^     
-   |                |      |          |        |                 |                |      |   
-   |                |      |          |        |                 |                |      |   
-   |                |      |          |        |                 |                |      |   
-   |                |      |          |        |                 |                |      |   
-   |             +------------+       |        |   +-----------------------+      |      |
-   |             | StatusInfo |-------+        +---| _NonMutableStatusInfo |      |      |
-   |             +------------+                    +-----------------------+      |      |
+   ^                ^      |        +-------------+             ^               +-----------+              
+   |                |      |        | _GetRawBase |             |               | _BaseDict |       
+   |                |      |        +-------------+             |               +-----------+      
+   |                |      |          ^        ^                |                 ^      ^     
+   |                |      |          |        |                |                 |      |   
+   |                |      |          |        |                |                 |      |   
+   |                |      |          |        |                |                 |      |   
+   |                |      |          |        |                |                 |      |   
+   |            +==============+      |        |   +-----------------------+      |      |
+   |            || StatusInfo ||------+        +---| _NonMutableStatusInfo |      |      |
+   |            +==============+                   +-----------------------+      |      |
    |                                    +-----------------+                       |  +---------------------------+
    +------------------------------------| _DictStatusInfo |-----------------------+  | _NonMutableDictStatusInfo |
                                         +-----------------+                          +---------------------------+
 
 
+where StatusInfo is the only class truly part of the public API.
 
 
 -------------------------------------------------------------------------------
@@ -120,8 +121,35 @@ For exmple:
     - classes AnalyzerReduce must implement method reduce()
     - ...
 
+
 Passing an analyzer object that does not implement the right method will 
 raise an IncorrectAnalyzer Exception.
+
+Implementation of an indexby() method:
+    - the input is an individual item from the list of data objects being analyzed
+    - the output is the key under which this item will belong in the aggregated object
+
+Implementation of a map() method:
+    - the input is an individual item from the list of data objects being analyzed
+    - the output is the modified item 
+
+Implementation of a filter() method:
+    - the input is an individual item from the list of data objects being analyzed
+    - the output is a boolean indicating if the item should be kept or not
+
+Implementation of a reduce() method:
+    - the input is an individual item from the list of data objects being analyzed
+    - the output is the aggregated result of analyzing the item and the previous value,
+      which is being stored in a class attribute
+
+Implementation of a transform() method:
+    - the input is the entire list of data objects
+    - the output is a new list of data object
+
+Implementation of a process() method:
+    - the input is the entire list of data objects
+    - the output can be anything
+
 
 A few basic pre-made Analyzers have been implemented, ready to use. 
 """
@@ -316,10 +344,10 @@ class StatusInfo(_Base, _AnalysisInterface, _GetRawBase):
         self.log.debug('Starting')
         if analyzer.analyzertype == 'indexby':
             return self.indexby(analyzer)
-        elif analyzer.analyzertype == 'filter':
-            return self.filter(analyzer)
         elif analyzer.analyzertype == 'map':
             return self.map(analyzer)
+        elif analyzer.analyzertype == 'filter':
+            return self.filter(analyzer)
         elif analyzer.analyzertype == 'reduce':
             return self.reduce(analyzer)
         elif analyzer.analyzertype == 'transform':
@@ -397,6 +425,7 @@ class StatusInfo(_Base, _AnalysisInterface, _GetRawBase):
         new_info = StatusInfo(new_data, timestamp=self.timestamp)
         return new_info
 
+
     @catch_exception
     def __map(self, analyzer):
         new_data = []
@@ -404,7 +433,8 @@ class StatusInfo(_Base, _AnalysisInterface, _GetRawBase):
             new_item = analyzer.map(item)
             new_data.append(new_item)
         return new_data
-    
+
+
     # -------------------------------------------------------------------------
 
     @validate_call
@@ -420,6 +450,7 @@ class StatusInfo(_Base, _AnalysisInterface, _GetRawBase):
         new_data = self.__filter(analyzer)
         new_info = StatusInfo(new_data, timestamp=self.timestamp)
         return new_info
+
 
     @catch_exception
     def __filter(self, analyzer):
@@ -466,7 +497,8 @@ class StatusInfo(_Base, _AnalysisInterface, _GetRawBase):
         new_data = self.__transform(analyzer)
         new_info = StatusInfo(new_data, timestamp=self.timestamp)
         return new_info
-        
+
+
     @catch_exception
     def __transform(self, analyzer):
         new_data = analyzer.transform(self.data)
@@ -491,6 +523,7 @@ class StatusInfo(_Base, _AnalysisInterface, _GetRawBase):
     def __process(self, analyzer):
         new_data = analyzer.process(self.data)
         return new_data
+
 
 # =============================================================================
 
