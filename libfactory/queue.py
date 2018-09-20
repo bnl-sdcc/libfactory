@@ -18,16 +18,14 @@ class NotImplementedException(Exception):
 class QTreeNode(object):
     '''
     Common code for any Tree Node. 
-    
-    '''    
+    '''
+    STATES = ['idle','running','complete']
+        
     def submit(self, n):
         raise NotImplementedException()
 
     def rebalance(self, n):
         raise NotImplementedException()
-
-    def getInfo(self):
-        raise NotImplementedException()    
     
     def isFull(self):
         raise NotImplementedException()
@@ -57,9 +55,18 @@ class QTreeNode(object):
         }
         '''
         info = {}
+        info[self.label] = {}
+        for state in QTreeNode.STATES:
+            info[self.label][state] = 0 
+
         for ch in self.children:
             chinfo = ch.getInfo()
-
+            k = chinfo.keys()[0]
+            dict = chinfo[k]
+            for state in QTreeNode.STATES:
+                info[self.label][state] += dict[state]            
+            #print(dict)
+        return info
 
 
 class LBQueue(QTreeNode):
@@ -257,15 +264,13 @@ class SubmitQueue(QTreeNode):
             pass
         i = {}
         i[self.label] = {}        
-        
         if site is not None:
             i[self.label]['idle'] = site.idle 
-            i[self.label]['running'] = site.runnning
+            i[self.label]['running'] = site.running
             i[self.label]['complete'] = site.complete
         else:
-            i[self.label]['idle'] = 0 
-            i[self.label]['running'] = 0
-            i[self.label]['complete'] = 0            
+            for state in QTreeNode.STATES:
+                i[self.label][state] = 0 
         return i
 
 
@@ -455,6 +460,8 @@ childlist = None
 maxtransferpercycle = 5
 minpending = 2
 batchplugin = None
+minfullpending = 2
+maxtransferpercycle = 5
 
 
 [lbroot1]
@@ -516,6 +523,7 @@ mock=max100
             uh = qo.submit(subnumber)
             unhandled += uh
         for qo in rl:
+            print(qo.getInfo())
             qo.printtree()
         mbp.process()    
         logging.info("cycles completed: %s" % mbp.cycles)
