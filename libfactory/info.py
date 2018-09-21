@@ -634,6 +634,12 @@ class AnalyzerReduce(Analyzer):
         raise NotImplementedError
 
 
+class AnalyzerTransform(Analyzer):
+    analyzertype = "transform"
+    def transform(self):
+        raise NotImplementedError
+
+
 class AnalyzerProcess(Analyzer):
     analyzertype = "process"
     def process(self):
