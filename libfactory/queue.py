@@ -3,8 +3,11 @@
 # Classes for managing load balancing and ordered fill in an arbitrary tree. 
 #
 
+import getopt
 import logging
+import random
 import sys
+import threading
 
 from ConfigParser import ConfigParser
 import StringIO
@@ -15,7 +18,7 @@ from IPython.lib.editorhooks import idle
 class NotImplementedException(Exception):
     pass
 
-class QTreeNode(object):
+class QTreeNode(threading.Thread):
     '''
     Common code for any Tree Node. 
     '''
@@ -24,10 +27,13 @@ class QTreeNode(object):
     def submit(self, n):
         raise NotImplementedException()
 
-    def rebalance(self, n):
+    def rebalance(self):
         raise NotImplementedException()
     
     def isFull(self):
+        raise NotImplementedException()
+
+    def run(self):
         raise NotImplementedException()
 
     def __repr__(self):
@@ -35,16 +41,15 @@ class QTreeNode(object):
         s +='[%s] full=%s ' % (self.label, self.isFull())
         return s
 
-    
     def printtree(self, depth = 0):
         s = ""
         s += " " * depth * 4
         s += "%s" % self
-        #s += "\n"
-        print(s)
+        s += "\n"
         for ch in self.children:
-            ch.printtree(depth + 1)
-
+            s += ch.printtree(depth + 1)
+        return s
+    
     def getInfo(self):
         '''
         { 'label' : 
@@ -76,11 +81,14 @@ class LBQueue(QTreeNode):
      
     '''
     def __init__(self, config, section):
+        threading.Thread.__init__(self)
         self.log = logging.getLogger()
         self.config = config
         self.section = section
         self.label = section
         self.childlist = [] # default
+        self.isroot = self.config.getboolean(section, 'isroot')
+        self.maxtransfer = self.config.getint(section, 'maxtransfer')
         childstr = self.config.get(section, 'childlist')
         for ch in childstr.split(','):
             self.childlist.append(ch.strip())
@@ -101,21 +109,25 @@ class LBQueue(QTreeNode):
                 if not ch.isFull():
                     openchildren.append(ch)
             numopen = len(openchildren)
+            self.log.debug("[%s] %s open children." % (self.label, numopen))
             if numopen > 0:
                 if numopen == 1:
                     tosub = n
                 elif numopen > 1:
                     tosub = n/len(openchildren)
+                    if tosub == 0:               # Deal with very low numbers without ciel() or randomization. 
+                        tosub = 1
                 for ch in openchildren:
                     self.log.debug("Submitting %s to %s" % (tosub, ch.label))
-                    ch.submit(tosub)      
+                    ch.submit(tosub)
             else:
-                self.log.info("All children full. Returning %s" % n)
-                return n
+                if self.isroot:
+                    self.log.info("[%s] Submitted to when full. Unable to handle more jobs")
+                else:
+                    self.log.error("[%s] Submitted to when full. Always call isFull() before submitting." % self.label)      
         elif n < 0:
             self.log.info("Submitting negative number retire()")
-        
-        return 0
+       
         
             
     def isFull(self):
@@ -132,7 +144,22 @@ class LBQueue(QTreeNode):
         '''
         Collect info from children and move jobs from one to another if needed. 
         '''
-        self.log.debug("Rebalance called for [%s]" % self.label) 
+        self.log.debug("Rebalance called for [%s]" % self.label)
+        overflow = 0
+        for ch in self.children:
+            overflow += ch.rebalance()
+        self.log.debug("[%s] %d overflow" % (self.label, overflow) ) 
+        if overflow > 0 and not self.isFull():
+            self.submit(overflow)
+            overflow = 0        
+        return overflow
+
+        
+
+    def run(self):
+        '''
+        Will be used if this is a root node. 
+        '''
     
 
 class OFQueue(QTreeNode):
@@ -140,10 +167,13 @@ class OFQueue(QTreeNode):
     An Ordered Fill queue node. 
     '''
     def __init__(self, config,  section):
+        threading.Thread.__init__(self)
         self.log = logging.getLogger()
         self.config = config
         self.section = section
         self.label = section
+        self.isroot = self.config.getboolean(section, 'isroot')
+        self.maxtransfer = self.config.getint(section, 'maxtransfer')
         self.childlist = [] # default
         childstr = self.config.get(section, 'childlist')
         for ch in childstr.split(','):
@@ -168,19 +198,25 @@ class OFQueue(QTreeNode):
                         self.log.debug("Submitting %s to %s" % (n, ch.section))
                         ch.submit(n)
             else:
-                self.log.info("All children full. Returning %s" % n)
-                return n
+                self.log.error("[%s] Submitted to when full. Always call isFull() before submitting." % self.label) 
         elif n < 0:
             self.log.info("Submitting negative number retire()")
-        return 0
+
    
-    def rebalance(self, n):
+    def rebalance(self):
         '''
         Collect info from children and move jobs from one to another if needed. 
-        
         '''
-        self.log.debug("Rebalance called for [%s]" % self.label) 
-
+        self.log.debug("Rebalance called for [%s]" % self.label)
+        overflow = 0
+        for ch in self.children:
+            overflow += ch.rebalance()
+        if overflow > 0 and not self.isFull():
+            self.submit(overflow)
+            overflow = 0        
+        self.log.debug("[%s] %d overflow" % (self.label, overflow) ) 
+        return overflow
+    
 
     def isFull(self):
         '''
@@ -193,7 +229,6 @@ class OFQueue(QTreeNode):
         return full
 
 
-
 class SubmitQueue(QTreeNode):
     
     def __init__(self, config,  section):
@@ -202,6 +237,8 @@ class SubmitQueue(QTreeNode):
         self.section = section
         self.label = section
         self.parent = None
+        self.isroot = self.config.getboolean(section, 'isroot')
+        self.maxtransfer = self.config.getint(section, 'maxtransfer')
         self.batchpluginname = config.get(section, 'batchplugin')
         bp = getattr(sys.modules[__name__], self.batchpluginname)
         bpo = bp(config, section)
@@ -211,6 +248,7 @@ class SubmitQueue(QTreeNode):
             self.mock = config.get(section, 'mock')
         except:
             self.mock = None
+        self.minfullpending = config.getint(section, 'minfullpending')
         
         self.childlist = []
         self.children = []
@@ -222,28 +260,23 @@ class SubmitQueue(QTreeNode):
                                     label=self.section, 
                                     mock=self.mock)
         else:
-            self.log.info("Target full. Returning %s" % n)
-            return n            
-        return 0
-
+            self.log.error("[%s] Submitted to when full. Always call isFull() before submitting." % self.label) 
        
     def isFull(self):
         '''
-        q is full if pending > 10
+        isFull means that all targets have full queues AND minpending is idle at each target. 
         '''
         # for testing delegate to relevant site. 
         try:
             site = self.batchplugin.sites[self.section]
-            return site.isFull()
+            if site.isFull() and site.idle >= self.minfullpending:
+                return True
         except KeyError:
-            return False 
+            return False
+        return False 
         
         # eventually calculate based on job startup timing info, pending time, etc. 
         #info = self.batchplugin.getInfo()
-
-        #pending = info[self.section]['idle']
-        #if pending > 10:
-        #    full = True
         
 
     def __repr__(self):
@@ -273,9 +306,29 @@ class SubmitQueue(QTreeNode):
                 i[self.label][state] = 0 
         return i
 
+    def rebalance(self):
+        '''
+        Collect info from children and move jobs from one to another if needed. 
+        '''
+        self.log.debug("Rebalance called for [%s]: Leaf node. No sub-call." % self.label)
+        site = None
+        overflow = 0
+        try:
+            site = self.batchplugin.sites[self.section]
+            if site.isFull() and site.idle > self.minfullpending: 
+                overflow = site.idle - self.minfullpending
+                self.log.debug("[%s] idle=%d minfullpending=%s overflow=%d" % (self.label,
+                                                                               site.idle,
+                                                                               self.minfullpending,
+                                                                               overflow))
+                site.idle = site.idle - overflow
+                self.log.debug("[%s] Rebalancing %d idle jobs." % (self.label, overflow))
+        except KeyError:
+            pass
+        return overflow
+        
 
-
-class QueuesFactory(object):
+class QueueManager(object):
     ''' processes config file and returns list of tree objects'''
     
     def __init__(self, cp):
@@ -312,12 +365,22 @@ class QueuesFactory(object):
                            
     def getRootList(self):
         return self.rootlist
+ 
+    def getPrintTree(self):
+        s = ''
+        for qo in self.rootlist:
+            s += qo.printtree() 
+        return s
     
-
-
-#
-#   Mock infrastructure. Should move to /test
-#
+    
+    
+    
+    
+    
+    
+#############################################################################################
+#   Mock/ Test infrastructure. Should move to /test
+##############################################################################################
 
 class MockSite(object):
     
@@ -369,11 +432,6 @@ class MockBatchPlugin(object):
     max50      max 50 jobs  then full
     max100
          
-    
-       
-    
-    
-    
     '''
 
     instance = None
@@ -388,20 +446,45 @@ class MockBatchPlugin(object):
 
 class MockBatchPluginImpl(object):
         
-    def __init__(self, config, section):
+    def __init__(self, config, section, seed = None):
             self.log = logging.getLogger()
             self.config = config
             self.section = section
             self.cycles = 0
             self.sites = {}
-            
+            if seed is None:
+                random.seed(1234)  # with given input, should produce identical runs...
+            else: 
+                random.seed(seed)
+            self.completefactor = .05
     
-    def process(self):
+    
+    def processComplete(self):
         '''
-        Go through all idle jobs at various labels and decide which to run or complete. 
+        Go through all idle jobs at various labels and decide which to complete. 
         '''
         for label in self.sites.keys():
             s = self.sites[label]
+            running = s.running
+            
+            tocomplete = 0
+            if running > 0:
+                for i in range(0,running):
+                    rval = random.random()
+                    if rval < self.completefactor:
+                        tocomplete += 1
+                self.log.debug("[%s] Moving %d of %d jobs to complete." % (s.label, tocomplete, running))
+                s.running = s.running - tocomplete
+                s.complete = s.complete + tocomplete
+
+
+    def processIdle(self):
+        '''
+        Go through all idle jobs at various labels and decide which to complete. 
+        '''        
+        for label in self.sites.keys():
+            s = self.sites[label]
+            running = s.running                        
             idle = s.idle
             if idle > 0: 
                 if s.running < s.max:
@@ -410,7 +493,7 @@ class MockBatchPluginImpl(object):
                         torun = idle
                     else:
                         torun = avail
-                    self.log.info("Starting %s jobs on [%s]" % (torun, s.label))
+                    self.log.info("[%s] Moving %d jobs to running. " % (s.label, torun))
                     s.running = s.running + torun  
                     s.idle = s.idle - torun
         self.cycles += 1
@@ -457,17 +540,18 @@ def test_submit(submitlist=[10]):
     config = '''[DEFAULT]
 [DEFAULT]
 childlist = None
-maxtransferpercycle = 5
 minpending = 2
 batchplugin = None
+maxtransfer = 5
+isroot=False
+wmsplugin = None
 minfullpending = 2
-maxtransferpercycle = 5
 
 
 [lbroot1]
 klass = LBQueue
 childlist = lbnode1, ofnode1, subE
-root = True
+isroot = True
 
 [lbnode1]
 klass = LBQueue
@@ -496,12 +580,12 @@ mock=max10
 [subD]
 klass = SubmitQueue
 batchplugin = MockBatchPlugin
-mock=max50
+mock=max20
 
 [subE]
 klass = SubmitQueue
 batchplugin = MockBatchPlugin
-mock=max100
+mock=max30
 
 '''   
      
@@ -510,32 +594,74 @@ mock=max100
     cp.readfp(buf)
 
     mbp = MockBatchPlugin(cp, 'test')    
-    qf = QueuesFactory(cp)
-    rl = qf.getRootList()
+    qm = QueueManager(cp)
+    rl = qm.getRootList()
     for qo in rl:
         qo.printtree()
     logging.info("cycles completed: %s" % mbp.cycles)
-    
-    unhandled = 0
 
     for subnumber in submitlist:
         for qo in rl:
-            uh = qo.submit(subnumber)
-            unhandled += uh
-        for qo in rl:
-            print(qo.getInfo())
-            qo.printtree()
-        mbp.process()    
+            qo.submit(subnumber)
+        print(qm.getPrintTree())
+        mbp.processComplete()
+        print(qm.getPrintTree())
+        mbp.processIdle()   
         logging.info("cycles completed: %s" % mbp.cycles)
-    for qo in rl:
-        qo.printtree()    
-    logging.info("%d cycles completed. %d jobs unhandled." % (mbp.cycles, unhandled))
+        for qo in rl:
+            qo.rebalance()
+        print(qm.getPrintTree())    
+    logging.info("%d cycles completed. " % (mbp.cycles))
     
     
 if __name__ == '__main__':
-    logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
-    submitlist = [40 , 20, 0, 0, 0, 40, 0, 100, 30, 50]
-    test_submit(submitlist)
+        
+    fconfig_file = None
+    debug = 0
+    verbose = 0
+    submitlist = "40,20,0,0,0,40,0,100,30,50,0,0,0,0,0,0,0,0,0,0,0"
+    # Handle command line options
+    argv = sys.argv[1:]
+    try:
+        opts, args = getopt.getopt(argv, 
+                                   "hdvtc:s:", 
+                                   ["help", 
+                                    "debug", 
+                                    "verbose",
+                                    "config=",
+                                    "submitlist="
+                                    ])
+    except getopt.GetoptError as error:
+        print( str(error))                     
+        sys.exit(1)
+    for opt, arg in opts:
+        if opt in ("-h", "--help"):
+            print(usage)                     
+            sys.exit()            
+        elif opt in ("-d", "--debug"):
+            debug = 1
+        elif opt in ("-v", "--verbose"):
+            verbose = 1
+        elif opt in ("-c", "--config"):
+            fconfig_file = arg
+        elif opt in ("-s", "--submitlist"):
+            submitlist = arg
+    
+    substrlist = submitlist.split(",")
+    sublist = []
+    for item in substrlist:
+        item = item.strip()
+        num = int(item)
+        sublist.append(num)
+        
+    if verbose:
+        logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+    elif debug:
+        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+    else:
+        logging.basicConfig(stream=sys.stdout, level=logging.WARN)
+    
+    test_submit(sublist)
 
 
 
