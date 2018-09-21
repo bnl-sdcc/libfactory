@@ -446,7 +446,7 @@ class MockBatchPlugin(object):
 
 class MockBatchPluginImpl(object):
         
-    def __init__(self, config, section, seed = None):
+    def __init__(self, config, section, seed = None, completefactor = .10):
             self.log = logging.getLogger()
             self.config = config
             self.section = section
@@ -456,7 +456,7 @@ class MockBatchPluginImpl(object):
                 random.seed(1234)  # with given input, should produce identical runs...
             else: 
                 random.seed(seed)
-            self.completefactor = .05
+            self.completefactor = completefactor
     
     
     def processComplete(self):
@@ -497,8 +497,7 @@ class MockBatchPluginImpl(object):
                     s.running = s.running + torun  
                     s.idle = s.idle - torun
         self.cycles += 1
-                    
-    
+                        
        
     def submit(self, n, label, mock=None):
         self.log.debug("Getting %s jobs label=%s" % (n, label))
@@ -535,7 +534,7 @@ class MockBatchPluginImpl(object):
         return s
 
 
-def test_submit(submitlist=[10]):
+def test_submit(submitlist=[10], completefactor = .10):
     logging.debug("Starting test...")
     config = '''[DEFAULT]
 [DEFAULT]
@@ -565,7 +564,7 @@ childlist = subA, subB
 [subA]
 klass = SubmitQueue
 batchplugin = MockBatchPlugin
-mock=max10
+mock=max5
 
 [subB]
 klass = SubmitQueue
@@ -598,20 +597,28 @@ mock=max30
     rl = qm.getRootList()
     for qo in rl:
         qo.printtree()
-    logging.info("cycles completed: %s" % mbp.cycles)
 
     for subnumber in submitlist:
+        thiscycle = mbp.cycles +1
+        print("cycle: %d do submission." % thiscycle)
         for qo in rl:
             qo.submit(subnumber)
         print(qm.getPrintTree())
+        
+        print("cycle: %d  finish jobs." % thiscycle)
         mbp.processComplete()
         print(qm.getPrintTree())
+
+        print("cycle: %d run jobs." % thiscycle)
         mbp.processIdle()   
-        logging.info("cycles completed: %s" % mbp.cycles)
+        print(qm.getPrintTree())
+        
+        print("cycle: %d rebalance" % thiscycle)
         for qo in rl:
             qo.rebalance()
-        print(qm.getPrintTree())    
-    logging.info("%d cycles completed. " % (mbp.cycles))
+        print(qm.getPrintTree()) 
+           
+    print("%d cycles completed. " % (mbp.cycles))
     
     
 if __name__ == '__main__':
@@ -619,17 +626,30 @@ if __name__ == '__main__':
     fconfig_file = None
     debug = 0
     verbose = 0
-    submitlist = "40,20,0,0,0,40,0,100,30,50,0,0,0,0,0,0,0,0,0,0,0"
+    submitlist = "10,20,0,0,0,10,0,0"
+    completefactor = .10
+    usage = """Usage: Agis.py [OPTIONS]  
+    OPTIONS: 
+        -h --help                   Print this message
+        -d --debug                  Debug messages
+        -v --verbose                Verbose information
+        -c --config                 Config file [None]
+        -s --submitlist             Number to submit [10,20,0,0,0,10,0,]
+        -C --completefactor         Chance of completion/cycle [.10]
+    """
+    
+    
     # Handle command line options
     argv = sys.argv[1:]
     try:
         opts, args = getopt.getopt(argv, 
-                                   "hdvtc:s:", 
+                                   "hdvtc:s:C:", 
                                    ["help", 
                                     "debug", 
                                     "verbose",
                                     "config=",
-                                    "submitlist="
+                                    "submitlist=",
+                                    "completefactor",
                                     ])
     except getopt.GetoptError as error:
         print( str(error))                     
@@ -646,6 +666,8 @@ if __name__ == '__main__':
             fconfig_file = arg
         elif opt in ("-s", "--submitlist"):
             submitlist = arg
+        elif opt in ('-C', "--completefactor"):
+            completefactor = float(arg)
     
     substrlist = submitlist.split(",")
     sublist = []
@@ -661,7 +683,7 @@ if __name__ == '__main__':
     else:
         logging.basicConfig(stream=sys.stdout, level=logging.WARN)
     
-    test_submit(sublist)
+    test_submit(sublist, completefactor)
 
 
 
