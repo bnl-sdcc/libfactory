@@ -51,10 +51,7 @@ setup(
     maintainer='Jose Caballero, John Hover',
     maintainer_email='jcaballero@bnl.gov, jhover@bnl.gov',
     url='https://github.com/bnl-sdcc/libfactory',
-    packages=['libfactory',
-              'libfactory.test', 
-              'libfactory.test.unit', 
-             ],
+    packages=['libfactory',],
     scripts=scripts,
     data_files=data_files,
     install_requires=[]
