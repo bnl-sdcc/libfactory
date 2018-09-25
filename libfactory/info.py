@@ -756,7 +756,13 @@ class TotalRunningTimeFromRunningAndFinishedJobs(AnalyzerReduce):
             running = self.now - int(job['enteredcurrentstatus'])
         elif job['jobstatus'] == 3 or \
              job['jobstatus'] == 4:
-            running = int(job['remotewallclocktime'])
+            try:
+                running = int(job['remotewallclocktime'])
+            except:
+                # unclear if a finished job that is still in condor_q
+                # but not yet in condor_history
+                # has classad remotewallclocktime
+                running = 0
         else:
             running = 0
 
