@@ -297,16 +297,31 @@ class HTCondorScheddImpl(object):
 
     # --------------------------------------------------------------------------
 
-    def condor_q(self, attribute_l, constraint_l=None):
+    def condor_q(self, attribute_l, constraint_l=None, globalquery=False):
         '''
         Returns a list of ClassAd objects, output of a condor_q query. 
         :param list attribute_l: list of classads strings to be included 
             in the query 
         :param list constraint_l: [optional] list of constraints strings 
             for the query
+        :param bool globalquery: when True, query all schedds in the pool    
         :return list: list of ClassAd objects
         '''
         self.log.debug('starting')
+
+        if globalquery:
+            out = []
+            schedd_ad_l = htcondor.Collector().locateAll(htcondor.DaemonTypes.Schedd)
+            for schedd_ad in schedd_ad_l:
+                address = schedd_ad['MyAddress']
+                self.log.debug('Quering Schedd with address %s' %address)
+                schedd = HTCondorSchedd(htcondor.Schedd(schedd_ad), address) 
+                out += schedd.condor_q(attribute_l, constraint_l)
+                return out
+        # if not globalquery...
+
+        now = int(time.time())
+        self.__clean_cache(now)
 
         # sorting input lists, needed for them to become keys in the caching
         attribute_l.sort()
@@ -324,17 +339,15 @@ class HTCondorScheddImpl(object):
     
         constraint_str = _build_constraint_str(constraint_l)
 
-        now = int(time.time())
-        self.__clean_cache(now)
         try:
             # check if there is a cached value
-            key = (hash(str(attribute_l)), hash(constraint_str))
+            key = (hash(str(attribute_l)), hash(constraint_str), globalquery)
             cached_output = self.condor_q_cached_d[key]
             self.log.debug('Found previous output for this query in the cached.')
             out = cached_output[1]
         except:
             self.log.debug('There is no cached value for this query. Getting new one.')
-            out = self.__condor_q(constraint_str, attribute_l)
+            out = self.__condor_q(constraint_str, attribute_l, globalquery)
             self.condor_q_cached_d[key] = (now, out)
 
         self.log.debug('out = %s' %out)
