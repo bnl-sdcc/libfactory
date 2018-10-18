@@ -49,6 +49,7 @@ import logging.handlers
 import os
 import socket
 import subprocess
+import time
 import threading
 
 import classad
@@ -121,18 +122,8 @@ def _address(hostname, port=None):
 #              C O L L E C T O R   &   S C H E D D 
 # =============================================================================
 
-###class HTCondorRemoteScheddWrapper(object):
-###    """
-###    trivial class just to host in a single object 
-###      * an htcondor.Schedd() object 
-###      * its address 
-###    """
-###    def __init__(self, schedd, address):
-###        self.schedd = schedd
-###        self.address = address
 
-
-class _HTCondorCollector(object):
+class HTCondorCollectorImpl(object):
 
     def __init__(self, hostname=None, port=None):
         """
@@ -187,8 +178,6 @@ class _HTCondorCollector(object):
         except Exception as ex:
             self.log.critical('Unable to instantiate an Schedd object')
             raise ScheddNotReachable()
-        ###scheddwrap = HTCondorRemoteScheddWrapper(schedd, address)
-        ###return HTCondorSchedd(scheddwrap)
         return HTCondorSchedd(schedd, address)
 
     # --------------------------------------------------------------------------
@@ -229,11 +218,11 @@ class HTCondorCollector(object):
         if not hostname:
             address = 'localhost'
             if not address in HTCondorCollector.instances.keys():
-                HTCondorCollector.instances[address] = _HTCondorCollector()
+                HTCondorCollector.instances[address] = HTCondorCollectorImpl()
         else:
             address = _address(hostname, port)
             if not address in HTCondorCollector.instances.keys():
-                HTCondorCollector.instances[address] = _HTCondorCollector(hostname, port)
+                HTCondorCollector.instances[address] = HTCondorCollectorImpl(hostname, port)
  
         return HTCondorCollector.instances[address]
 
@@ -241,34 +230,17 @@ class HTCondorCollector(object):
 # =============================================================================
 
     
-class _HTCondorSchedd(object):
+class HTCondorScheddImpl(object):
 
-    ###def __init__(self, scheddwrap=None):
-    ###    """
-    ###    :param HTCondorRemoteScheddWrapper scheddwrap: [optional] when provided, 
-    ###        the current object is built on it to contact a remote schedd.
-    ###        Otherwise, a local schedd is assumed.
-    ###    """
-    ###    self.log = logging.getLogger('htcondorschedd')
-    ###    self.log.addHandler(logging.NullHandler())
-    ###    if scheddwrap:
-    ###        self.schedd = scheddwrap.schedd
-    ###        self.address = scheddwrap.address
-    ###    else:
-    ###        self.address = None
-    ###        try:
-    ###            self.schedd = htcondor.Schedd()  
-    ###        except Exception as ex:
-    ###            self.log.critical('Unable to instantiate an Schedd object')
-    ###            raise ScheddNotReachable()
-    ###    # Lock object to serialize the submission and query calls
-    ###    self.lock = threading.Lock() 
-    ###    self.log.debug('HTCondorSchedd object initialized')
-
-    def __init__(self, schedd=None, address=None):
+    def __init__(self, schedd=None, address=None, cachingtime=60):
         """
         :param htcondor.schedd schedd: [optional] the schedd
         :param str address: [optional] when provided, the address of the schedd
+        :param int cachingtime: number of seconds to cache previous outputs. 
+                                If a new query is issued before that time, 
+                                the cached value is returned. 
+                                Otherwise, a new one is calculated.
+                                Default is 60 seconds.
         """
         self.log = logging.getLogger('htcondorschedd')
         self.log.addHandler(logging.NullHandler())
@@ -286,10 +258,19 @@ class _HTCondorSchedd(object):
             self.address = None
         # Lock object to serialize the submission and query calls
         self.lock = threading.Lock() 
+
+        # cached outputs
+        # the keys for these caching dictionaries is a 2-items tuple:
+        #   - a hash of the list of attributes included in the query
+        #   - a hash of the list of contraints included in the query
+        # the values are a 2-items tuple
+        #   - time stamp (in seconds since epoch) of the query
+        #   - the output of the query
+        self.cachingtime = cachingtime
+        self.condor_q_cached_d = {}
+        self.condor_history_cached_d = {}
+
         self.log.debug('HTCondorSchedd object initialized')
-
-
-
 
 
 #    def __validate_schedd(self, schedd):
@@ -302,57 +283,35 @@ class _HTCondorSchedd(object):
 #        except Exception:
 #            raise ScheddNotReachable()
 
+
+    def __clean_cache(self, now):
+        """
+        remove old values from the caches
+        """
+        self.log.debug('Starting.')
+        for k,v in self.condor_q_cached_d.items():
+            if now > v[0] + self.cachingtime:
+                self.log.debug('Removing too old item from condor_q cache.')
+                self.condor_q_cached_d.pop(k)
+        self.log.debug('Leaving.')
+
     # --------------------------------------------------------------------------
 
-    ###def condor_q(self, attribute_l, constraint_l=None):
-    ###    '''
-    ###    Returns a list of ClassAd objects, output of a condor_q query. 
-    ###    :param list attribute_l: list of classads strings to be included 
-    ###        in the query 
-    ###    :param list constraint_l: [optional] list of constraints strings 
-    ###        for the query
-    ###    :return list: list of ClassAd objects
-    ###    '''
-    ###    self.log.debug('starting')
-    ###    if type(attribute_l) is not list:
-    ###        raise IncorrectInputType("attribute_l", list)
-    ###    if constraint_l is not None and\
-    ###       type(constraint_l) is not list:
-    ###        raise IncorrectInputType("constraint_l", list)
-    ###
-    ###    self.log.debug('list of attributes in the query = %s' %attribute_l)
-    ###    self.log.debug('list of constraints in the query = %s' %constraint_l)
-    ###
-    ###    constraint_str = _build_constraint_str(constraint_l)
-    ###    self.lock.acquire() 
-    ###    out = self.schedd.query(constraint_str, attribute_l)
-    ###    self.lock.release() 
-    ###    self.log.debug('out = %s' %out)
-    ###    return out
-
-    def condor_q(self, attribute_l, constraint_l=None, globalquery=False):
+    def condor_q(self, attribute_l, constraint_l=None):
         '''
         Returns a list of ClassAd objects, output of a condor_q query. 
         :param list attribute_l: list of classads strings to be included 
             in the query 
         :param list constraint_l: [optional] list of constraints strings 
             for the query
-        :param bool globalquery: when True, query all schedds in the pool
         :return list: list of ClassAd objects
         '''
         self.log.debug('starting')
-        if globalquery:
-            out = []
-            # FIXME, what happens if this code is run from a host that is not 
-            #        one of the schedd in the pool, so the Collector is remote
-            #        and we need to provide for its address???
-            schedd_ad_l = htcondor.Collector().locateAll(htcondor.DaemonTypes.Schedd)
-            for schedd_ad in schedd_ad_l:
-                address = schedd_ad['MyAddress']
-                schedd = HTCondorSchedd(htcondor.Schedd(schedd_ad), address) 
-                out += schedd.condor_q(attribute_l, constraint_l)
-            self.log.debug('out = %s' %out)
-            return out
+
+        # sorting input lists, needed for them to become keys in the caching
+        attribute_l.sort()
+        if constraint_l:
+            constraint_l.sort()
 
         if type(attribute_l) is not list:
             raise IncorrectInputType("attribute_l", list)
@@ -364,10 +323,31 @@ class _HTCondorSchedd(object):
         self.log.debug('list of constraints in the query = %s' %constraint_l)
     
         constraint_str = _build_constraint_str(constraint_l)
+
+        now = int(time.time())
+        self.__clean_cache(now)
+        try:
+            # check if there is a cached value
+            key = (hash(str(attribute_l)), hash(constraint_str))
+            cached_output = self.condor_q_cached_d[key]
+            self.log.debug('Found previous output for this query in the cached.')
+            out = cached_output[1]
+        except:
+            self.log.debug('There is no cached value for this query. Getting new one.')
+            out = self.__condor_q(constraint_str, attribute_l)
+            self.condor_q_cached_d[key] = (now, out)
+
+        self.log.debug('out = %s' %out)
+        return out
+
+
+    def __condor_q(self, constraint_str, attribute_l):
+        """
+        the actual query
+        """
         self.lock.acquire() 
         out = self.schedd.query(constraint_str, attribute_l)
         self.lock.release() 
-        self.log.debug('out = %s' %out)
         return out
 
 
@@ -486,41 +466,22 @@ class _HTCondorSchedd(object):
         return int(procid) 
 
 
-###class HTCondorSchedd(object):
-###    """
-###    overriding __new__() to make HTCondorSchedd a Singleton
-###    """
-###    instances = {}
-###
-###    def __new__(cls, scheddwrap=None):
-###
-###        if not scheddwrap:
-###            address = 'localhost'
-###            if not address in HTCondorSchedd.instances.keys():
-###                HTCondorSchedd.instances[address] = _HTCondorSchedd()
-###        else:
-###            address = scheddwrap.address
-###            if not address in HTCondorSchedd.instances.keys():
-###                HTCondorSchedd.instances[address] = _HTCondorSchedd(scheddwrap)
-###
-###        return HTCondorSchedd.instances[address]
-
 class HTCondorSchedd(object):
     """
     overriding __new__() to make HTCondorSchedd a Singleton
     """
     instances = {}
 
-    def __new__(cls, schedd=None, address=None):
+    def __new__(cls, schedd=None, address=None, cachingtime=60):
 
         if not address:
             address = 'localhost'
             if not address in HTCondorSchedd.instances.keys():
-                HTCondorSchedd.instances[address] = _HTCondorSchedd(schedd)
+                HTCondorSchedd.instances[address] = HTCondorScheddImpl(schedd, cachingtime=cachingtime)
         else:
             address = address
             if not address in HTCondorSchedd.instances.keys():
-                HTCondorSchedd.instances[address] = _HTCondorSchedd(schedd, address)
+                HTCondorSchedd.instances[address] = HTCondorScheddImpl(schedd, address, cachingtime=cachingtime)
 
         return HTCondorSchedd.instances[address]
 
