@@ -317,7 +317,7 @@ class HTCondorScheddImpl(object):
                 self.log.debug('Quering Schedd with address %s' %address)
                 schedd = HTCondorSchedd(htcondor.Schedd(schedd_ad), address) 
                 out += schedd.condor_q(attribute_l, constraint_l)
-                return out
+            return out
         # if not globalquery...
 
         now = int(time.time())
