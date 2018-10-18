@@ -165,7 +165,7 @@ class HTCondorCollectorImpl(object):
         #   - time stamp (in seconds since epoch) of the query
         #   - the output of the query
         self.cachingtime = cachingtime
-        self.condor_status_cache_d = {}
+        self.condor_status_cached_d = {}
 
         self.log.debug('HTCondorCollector object initialized')
 
@@ -224,7 +224,7 @@ class HTCondorCollectorImpl(object):
         self.log.debug('starting')
 
         now = int(time.time())
-        self.condor_status_cached_d = clean_cache(self.condor_status_cached_d, now, self.cachingtime)
+        self.condor_status_cached_d = _clean_cache(self.condor_status_cached_d, now, self.cachingtime)
 
         # sorting input lists, needed for them to become keys in the caching
         attribute_l.sort()
@@ -439,7 +439,7 @@ class HTCondorScheddImpl(object):
 
 
         now = int(time.time())
-        self.condor_history_cached_d = _clean_cache(self.condor_history_cached_d, now, self.cachingtime)
+        self.condor_history_cached_d = _clean_cache(self.condor_history_cache_d, now, self.cachingtime)
 
         # sorting input lists, needed for them to become keys in the caching
         attribute_l.sort()
