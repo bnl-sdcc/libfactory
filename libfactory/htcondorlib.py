@@ -118,6 +118,20 @@ def _address(hostname, port=None):
     return address
 
 
+def _clean_cache(cache_d, now, cachingtime):
+    """
+    remove too old items from a caching dictionary
+    :param dict cache_d: the dictionary
+    :param int now: now expressed in seconds since epoch
+    :param int cachingtime: number of seconds for how long to keep an item
+                            in the cache
+    """
+    for k,v in cache_d.items():
+        if now > v[0] + cachingtime:
+            cache_d.pop(k)
+    return cache_d
+
+
 # =============================================================================
 #              C O L L E C T O R   &   S C H E D D 
 # =============================================================================
@@ -284,17 +298,6 @@ class HTCondorScheddImpl(object):
 #            raise ScheddNotReachable()
 
 
-    def __clean_cache(self, now):
-        """
-        remove old values from the caches
-        """
-        self.log.debug('Starting.')
-        for k,v in self.condor_q_cached_d.items():
-            if now > v[0] + self.cachingtime:
-                self.log.debug('Removing too old item from condor_q cache.')
-                self.condor_q_cached_d.pop(k)
-        self.log.debug('Leaving.')
-
     # --------------------------------------------------------------------------
 
     def condor_q(self, attribute_l, constraint_l=None, globalquery=False):
@@ -321,7 +324,7 @@ class HTCondorScheddImpl(object):
         # if not globalquery...
 
         now = int(time.time())
-        self.__clean_cache(now)
+        self.condor_q_cached_d = _clean_cache(self.condor_q_cached_d, now, self.cachingtime)
 
         # sorting input lists, needed for them to become keys in the caching
         attribute_l.sort()
@@ -363,18 +366,40 @@ class HTCondorScheddImpl(object):
         self.lock.release() 
         return out
 
-
+    # --------------------------------------------------------------------------
     
-    def condor_history(self, attribute_l, constraint_l=None):
+    def condor_history(self, attribute_l, constraint_l=None, globalquery=False):
         """
         Returns a list of ClassAd objects, output of a condor_history query. 
         :param list attribute_l: list of classads strings to be included 
             in the query 
         :param list constraint_l: [optional] list of constraints strings 
             for the query
+        :param bool globalquery: when True, query all schedds in the pool
         :return list: list of ClassAd objects
         """
         self.log.debug('starting')
+
+        if globalquery:
+            out = []
+            schedd_ad_l = htcondor.Collector().locateAll(htcondor.DaemonTypes.Schedd)
+            for schedd_ad in schedd_ad_l:
+                address = schedd_ad['MyAddress']
+                self.log.debug('Quering Schedd with address %s' %address)
+                schedd = HTCondorSchedd(htcondor.Schedd(schedd_ad), address)
+                out += schedd.condor_history(attribute_l, constraint_l)
+            return out
+        # if not globalquery...
+
+
+        now = int(time.time())
+        self.condor_history_cached_d = _clean_cache(self.condor_history_cached_d, now, self.cachingtime)
+
+        # sorting input lists, needed for them to become keys in the caching
+        attribute_l.sort()
+        if constraint_l:
+            constraint_l.sort()
+
         if type(attribute_l) is not list:
             raise IncorrectInputType("attribute_l", list)
         if constraint_l is not None and\
@@ -385,13 +410,33 @@ class HTCondorScheddImpl(object):
         self.log.debug('list of constraints in the query = %s' %constraint_l)
 
         constraint_str = _build_constraint_str(constraint_l)
+
+        try:
+            # check if there is a cached value
+            key = (hash(str(attribute_l)), hash(constraint_str))
+            cached_output = self.condor_history_cached_d[key]
+            self.log.debug('Found previous output for this query in the cached.')
+            out = cached_output[1]
+        except:
+            self.log.debug('There is no cached value for this query. Getting new one.')
+            out = self.__condor_history(constraint_str, attribute_l)
+            self.condor_history_cached_d[key] = (now, out)
+
+        self.log.debug('out = %s' %out)
+        return out
+
+
+    def __condor_history(self, constraint_str, attribute_l):
+        """
+        the actual query 
+        """
         self.lock.acquire() 
         out = self.schedd.history(constraint_str, attribute_l, 0)
         self.lock.release() 
         out = list(out)
-        self.log.debug('out = %s' %out)
         return out
 
+    # --------------------------------------------------------------------------
 
     def condor_rm(self, jobid_l):
         """
@@ -404,7 +449,6 @@ class HTCondorScheddImpl(object):
         self.schedd.act(htcondor.JobAction.Remove, jobid_l)
         self.lock.release()
         self.log.debug('finished')
-    
 
     # --------------------------------------------------------------------------
 
