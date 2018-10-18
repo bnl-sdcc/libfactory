@@ -139,10 +139,15 @@ def _clean_cache(cache_d, now, cachingtime):
 
 class HTCondorCollectorImpl(object):
 
-    def __init__(self, hostname=None, port=None):
+    def __init__(self, hostname=None, port=None, cachingtime=60):
         """
         :param string hostname: hostname or IP of the remote collector
         :param int port: [optional] port to contact the remote collector
+        :param int cachingtime: number of seconds to cache previous outputs.
+                                If a new query is issued before that time,
+                                the cached value is returned. 
+                                Otherwise, a new one is calculated.
+                                Default is 60 seconds.
         """
         self.log = logging.getLogger('htcondorcollector')
         self.log.addHandler(logging.NullHandler())
@@ -151,6 +156,17 @@ class HTCondorCollectorImpl(object):
         self.collector = self.__getcollector()
         # Lock object to serialize the submission and query calls
         self.lock = threading.Lock() 
+
+        # cached outputs
+        # the keys for these caching dictionaries is a 2-items tuple:
+        #   - a hash of the list of attributes included in the query
+        #   - a hash of the list of contraints included in the query
+        # the values are a 2-items tuple
+        #   - time stamp (in seconds since epoch) of the query
+        #   - the output of the query
+        self.cachingtime = cachingtime
+        self.condor_status_cache_d = {}
+
         self.log.debug('HTCondorCollector object initialized')
 
 
@@ -203,22 +219,52 @@ class HTCondorCollectorImpl(object):
             in the query 
         :param list constraint_l: [optional] list of constraints strings 
             for the query
+        :return list: list of ClassAd objects
         """
         self.log.debug('starting')
+
+        now = int(time.time())
+        self.condor_status_cached_d = clean_cache(self.condor_status_cached_d, now, self.cachingtime)
+
+        # sorting input lists, needed for them to become keys in the caching
+        attribute_l.sort()
+        if constraint_l:
+            constraint_l.sort()
+
         if type(attribute_l) is not list:
             raise IncorrectInputType("attribute_l", list)
         if constraint_l is not None and\
            type(constraint_l) is not list:
             raise IncorrectInputType("constraint_l", list)
+
         self.log.debug('list of attributes in the query = %s' %attribute_l)
         self.log.debug('list of constraints in the query = %s' %constraint_l)
+
         constraint_str = _build_constraint_str(constraint_l)
-        self.lock.acquire()
-        out = self.collector.query(htcondor.AdTypes.Startd, constraint_str, attribute_l)
-        self.lock.release()
+
+        try:
+            # check if there is a cached value
+            key = (hash(str(attribute_l)), hash(constraint_str))
+            cached_output = self.condor_status_cached_d[key]
+            self.log.debug('Found previous output for this query in the cached.')
+            out = cached_output[1]
+        except:
+            self.log.debug('There is no cached value for this query. Getting new one.')
+            out = self.__condor_status(constraint_str, attribute_l)
+            self.condor_status_cached_d[key] = (now, out)
+
         self.log.debug('out = %s' %out)
         return out
 
+
+    def __condor_status(self, constraint_str, attribute_l):
+        """
+        the actual query
+        """
+        self.lock.acquire()
+        out = self.collector.query(htcondor.AdTypes.Startd, constraint_str, attribute_l)
+        self.lock.release()
+        return out
 
 
 class HTCondorCollector(object):
@@ -227,16 +273,16 @@ class HTCondorCollector(object):
     """
     instances = {}
 
-    def __new__(cls, hostname=None, port=None):
+    def __new__(cls, hostname=None, port=None, cachingtime=60):
 
         if not hostname:
             address = 'localhost'
             if not address in HTCondorCollector.instances.keys():
-                HTCondorCollector.instances[address] = HTCondorCollectorImpl()
+                HTCondorCollector.instances[address] = HTCondorCollectorImpl(cachingtime=cachingtime)
         else:
             address = _address(hostname, port)
             if not address in HTCondorCollector.instances.keys():
-                HTCondorCollector.instances[address] = HTCondorCollectorImpl(hostname, port)
+                HTCondorCollector.instances[address] = HTCondorCollectorImpl(hostname, port, cachingtime)
  
         return HTCondorCollector.instances[address]
 
