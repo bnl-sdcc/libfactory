@@ -341,13 +341,13 @@ class HTCondorScheddImpl(object):
 
         try:
             # check if there is a cached value
-            key = (hash(str(attribute_l)), hash(constraint_str), globalquery)
+            key = (hash(str(attribute_l)), hash(constraint_str))
             cached_output = self.condor_q_cached_d[key]
             self.log.debug('Found previous output for this query in the cached.')
             out = cached_output[1]
         except:
             self.log.debug('There is no cached value for this query. Getting new one.')
-            out = self.__condor_q(constraint_str, attribute_l, globalquery)
+            out = self.__condor_q(constraint_str, attribute_l)
             self.condor_q_cached_d[key] = (now, out)
 
         self.log.debug('out = %s' %out)
