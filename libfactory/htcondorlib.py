@@ -137,7 +137,7 @@ def _clean_cache(cache_d, now, cachingtime):
 # =============================================================================
 
 
-class HTCondorCollectorImpl(object):
+class _HTCondorCollector(object):
 
     def __init__(self, hostname=None, port=None, cachingtime=60):
         """
@@ -210,6 +210,19 @@ class HTCondorCollectorImpl(object):
             raise ScheddNotReachable()
         return HTCondorSchedd(schedd, address)
 
+    
+    def getAllSchedd(self):
+        """
+        returns all Schedds in the poolf
+        """
+        schedd_l = []
+        schedd_ad_l = self.collector.locateAll(htcondor.DaemonTypes.Schedd)
+        for schedd_ad in schedd_ad_l:
+            address = schedd_ad['MyAddress']
+            schedd = HTCondorSchedd(htcondor.Schedd(schedd_ad), address) 
+            schedd_l.append(schedd)
+        return schedd_l
+
     # --------------------------------------------------------------------------
 
     def condor_status(self, attribute_l, constraint_l=None):
@@ -278,11 +291,11 @@ class HTCondorCollector(object):
         if not hostname:
             address = 'localhost'
             if not address in HTCondorCollector.instances.keys():
-                HTCondorCollector.instances[address] = HTCondorCollectorImpl(cachingtime=cachingtime)
+                HTCondorCollector.instances[address] = _HTCondorCollector(cachingtime=cachingtime)
         else:
             address = _address(hostname, port)
             if not address in HTCondorCollector.instances.keys():
-                HTCondorCollector.instances[address] = HTCondorCollectorImpl(hostname, port, cachingtime)
+                HTCondorCollector.instances[address] = _HTCondorCollector(hostname, port, cachingtime)
  
         return HTCondorCollector.instances[address]
 
@@ -290,7 +303,7 @@ class HTCondorCollector(object):
 # =============================================================================
 
     
-class HTCondorScheddImpl(object):
+class _HTCondorSchedd(object):
 
     def __init__(self, schedd=None, address=None, cachingtime=60):
         """
@@ -580,13 +593,102 @@ class HTCondorSchedd(object):
         if not address:
             address = 'localhost'
             if not address in HTCondorSchedd.instances.keys():
-                HTCondorSchedd.instances[address] = HTCondorScheddImpl(schedd, cachingtime=cachingtime)
+                HTCondorSchedd.instances[address] = _HTCondorSchedd(schedd, cachingtime=cachingtime)
         else:
             address = address
             if not address in HTCondorSchedd.instances.keys():
-                HTCondorSchedd.instances[address] = HTCondorScheddImpl(schedd, address, cachingtime=cachingtime)
+                HTCondorSchedd.instances[address] = _HTCondorSchedd(schedd, address, cachingtime=cachingtime)
 
         return HTCondorSchedd.instances[address]
+
+
+# =============================================================================
+
+class _HTCondorPool(object):
+
+    def __init__(self, hostname=None, port=None, cachingtime=60):
+        """
+        :param string hostname: hostname or IP of the remote collector
+        :param int port: [optional] port to contact the remote collector
+        :param int cachingtime: number of seconds to cache previous outputs.
+                                If a new query is issued before that time,
+                                the cached value is returned. 
+                                Otherwise, a new one is calculated.
+                                Default is 60 seconds.
+        """
+        self.log = logging.getLogger('htcondorcollector')
+        self.log.addHandler(logging.NullHandler())
+        self.collector = HTCondorCollector(hostname, port, cachingtime)
+        self.schedd_l = self.collector.getAllSchedd()
+
+
+    def condor_q(self, attribute_l, constraint_l=None):
+        '''
+        Returns a list of ClassAd objects, output of a condor_q query. 
+        :param list attribute_l: list of classads strings to be included 
+            in the query 
+        :param list constraint_l: [optional] list of constraints strings 
+            for the query
+        :return list: list of ClassAd objects
+        '''
+        self.log.debug('starting')
+        out = []
+        for schedd in self.schedd_l:
+            out += schedd.condor_q(attribute_l, constraint_l)
+        self.log.debug('out = %s' %out)
+        return out
+
+
+    def condor_history(self, attribute_l, constraint_l=None):
+        '''
+        Returns a list of ClassAd objects, output of a condor_history query. 
+        :param list attribute_l: list of classads strings to be included 
+            in the query 
+        :param list constraint_l: [optional] list of constraints strings 
+            for the query
+        :return list: list of ClassAd objects
+        '''
+        self.log.debug('starting')
+        out = []
+        for schedd in self.schedd_l:
+            out += schedd.condor_history(attribute_l, constraint_l)
+        self.log.debug('out = %s' %out)
+        return out
+
+
+    def condor_status(self, attribute_l, constraint_l=None):
+        """ 
+        Returns a list of ClassAd objects, output of a condor_status query. 
+        :param list attribute_l: list of classads strings to be included 
+            in the query 
+        :param list constraint_l: [optional] list of constraints strings 
+            for the query
+        :return list: list of ClassAd objects
+        """
+        self.log.debug('starting')
+        out = self.collector.condor_status(attribute_l, constraint_l)
+        self.log.debug('out = %s' %out)
+        return out
+
+
+class HTCondorPool(object):
+    """
+    overriding __new__() to make HTCondorPool a Singleton
+    """
+    instances = {}
+
+    def __new__(cls, hostname=None, port=None, cachingtime=60):
+
+        if not hostname:
+            address = 'localhost'
+            if not address in HTCondorPool.instances.keys():
+                HTCondorPool.instances[address] = _HTCondorPool(cachingtime=cachingtime)
+        else:
+            address = _address(hostname, port)
+            if not address in HTCondorPool.instances.keys():
+                HTCondorPool.instances[address] = _HTCondorPool(hostname, port, cachingtime)
+ 
+        return HTCondorPool.instances[address]
 
 
 # =============================================================================

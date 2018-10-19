@@ -27,7 +27,7 @@ def choose_data_file_locations():
 
 current_time = time.gmtime()
 #release_version = "{0}.{1:0>2}.{2:0>2}".format(current_time.tm_year, current_time.tm_mon, current_time.tm_mday)
-release_version='1.1.0'
+release_version='1.2.0'
 
 scripts   = []
 etc_files = []
