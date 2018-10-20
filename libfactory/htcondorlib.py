@@ -153,7 +153,7 @@ class _HTCondorCollector(object):
         self.log.addHandler(logging.NullHandler())
         self.hostname = hostname
         self.port = port  
-        self.collector = self.__getcollector()
+        self.htcondor_collector = self.__getcollector()
         # Lock object to serialize the submission and query calls
         self.lock = threading.Lock() 
 
@@ -174,13 +174,13 @@ class _HTCondorCollector(object):
         self.log.debug('starting')
         if self.hostname:
             address = _address(self.hostname, self.port)
-            collector = htcondor.Collector(address)
+            htcondor_collector = htcondor.Collector(address)
             self.log.debug('got remote collector')
         else:
-            collector = htcondor.Collector()
+            htcondor_collector = htcondor.Collector()
             self.log.debug('got local collector')
-        self.__validate_collector(collector)
-        return collector
+        self.__validate_collector(htcondor_collector)
+        return htcondor_collector
 
 
     def __validate_collector(self, collector):
@@ -194,32 +194,37 @@ class _HTCondorCollector(object):
             raise CollectorNotReachable()
 
 
-    def getSchedd(self, hostname, port=None):
+    def getSchedd(self, hostname, port=None, cachingtime=60):
         """
         returns a schedd known by this collector
         :param string hostname: the hostname or IP of the remote schedd
         :param int port: [optional] port to contact the remote schedd
+        :param int cachingtime: [optional] the value of cachingtime for the 
+                                HTCondorSchedd object being returned
         :return HTCondorSchedd: 
         """
         address = _address(hostname, port)
-        scheddAd = self.collector.locate(htcondor.DaemonTypes.Schedd, address) 
+        scheddAd = self.htcondor_collector.locate(htcondor.DaemonTypes.Schedd, address) 
         try:
             schedd = htcondor.Schedd(scheddAd)
         except Exception as ex:
             self.log.critical('Unable to instantiate an Schedd object')
             raise ScheddNotReachable()
-        return HTCondorSchedd(schedd, address)
+        return HTCondorSchedd(schedd, address, cachingtime=cachingtime)
 
     
-    def getAllSchedd(self):
+    def getAllSchedd(self, cachingtime=60):
         """
         returns all Schedds in the poolf
+        :param int cachingtime: [optional] the value of cachingtime for all
+                                HTCondorSchedd objects being returned
+        :return list: 
         """
         schedd_l = []
-        schedd_ad_l = self.collector.locateAll(htcondor.DaemonTypes.Schedd)
+        schedd_ad_l = self.htcondor_collector.locateAll(htcondor.DaemonTypes.Schedd)
         for schedd_ad in schedd_ad_l:
             address = schedd_ad['MyAddress']
-            schedd = HTCondorSchedd(htcondor.Schedd(schedd_ad), address) 
+            schedd = HTCondorSchedd(htcondor.Schedd(schedd_ad), address, cachingtime=cachingtime) 
             schedd_l.append(schedd)
         return schedd_l
 
@@ -275,7 +280,7 @@ class _HTCondorCollector(object):
         the actual query
         """
         self.lock.acquire()
-        out = self.collector.query(htcondor.AdTypes.Startd, constraint_str, attribute_l)
+        out = self.htcondor_collector.query(htcondor.AdTypes.Startd, constraint_str, attribute_l)
         self.lock.release()
         return out
 
@@ -305,9 +310,9 @@ class HTCondorCollector(object):
     
 class _HTCondorSchedd(object):
 
-    def __init__(self, schedd=None, address=None, cachingtime=60):
+    def __init__(self, htcondor_schedd=None, address=None, cachingtime=60):
         """
-        :param htcondor.schedd schedd: [optional] the schedd
+        :param htcondor.schedd htcondor_schedd: [optional] the schedd
         :param str address: [optional] when provided, the address of the schedd
         :param int cachingtime: number of seconds to cache previous outputs. 
                                 If a new query is issued before that time, 
@@ -317,11 +322,11 @@ class _HTCondorSchedd(object):
         """
         self.log = logging.getLogger('htcondorschedd')
         self.log.addHandler(logging.NullHandler())
-        if schedd:
-            self.schedd = schedd
+        if htcondor_schedd:
+            self.htcondor_schedd = htcondor_schedd
         else:
             try:
-                self.schedd = htcondor.Schedd()  
+                self.htcondor_schedd = htcondor.Schedd()  
             except Exception as ex:
                 self.log.critical('Unable to instantiate an Schedd object')
                 raise ScheddNotReachable()
@@ -421,7 +426,7 @@ class _HTCondorSchedd(object):
         the actual query
         """
         self.lock.acquire() 
-        out = self.schedd.query(constraint_str, attribute_l)
+        out = self.htcondor_schedd.query(constraint_str, attribute_l)
         self.lock.release() 
         return out
 
@@ -452,7 +457,7 @@ class _HTCondorSchedd(object):
 
 
         now = int(time.time())
-        self.condor_history_cached_d = _clean_cache(self.condor_history_cache_d, now, self.cachingtime)
+        self.condor_history_cached_d = _clean_cache(self.condor_history_cached_d, now, self.cachingtime)
 
         # sorting input lists, needed for them to become keys in the caching
         attribute_l.sort()
@@ -490,7 +495,7 @@ class _HTCondorSchedd(object):
         the actual query 
         """
         self.lock.acquire() 
-        out = self.schedd.history(constraint_str, attribute_l, 0)
+        out = self.htcondor_schedd.history(constraint_str, attribute_l, 0)
         self.lock.release() 
         out = list(out)
         return out
@@ -505,7 +510,7 @@ class _HTCondorSchedd(object):
         self.log.debug('starting')
         self.log.debug('list of jobs to kill = %s' %jobid_l)
         self.lock.acquire()
-        self.schedd.act(htcondor.JobAction.Remove, jobid_l)
+        self.htcondor_schedd.act(htcondor.JobAction.Remove, jobid_l)
         self.lock.release()
         self.log.debug('finished')
 
@@ -560,7 +565,7 @@ class _HTCondorSchedd(object):
         """
         submit_d = jsd.items()
         submit = htcondor.Submit(submit_d)
-        with self.schedd.transaction() as txn:
+        with self.htcondor_schedd.transaction() as txn:
             clusterid = submit.queue(txn, n)
         return clusterid
 
@@ -619,7 +624,7 @@ class _HTCondorPool(object):
         self.log = logging.getLogger('htcondorcollector')
         self.log.addHandler(logging.NullHandler())
         self.collector = HTCondorCollector(hostname, port, cachingtime)
-        self.schedd_l = self.collector.getAllSchedd()
+        self.schedd_l = self.collector.getAllSchedd(cachingtime)
 
 
     def condor_q(self, attribute_l, constraint_l=None):
