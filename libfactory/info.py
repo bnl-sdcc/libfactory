@@ -151,16 +151,16 @@ Implementation of a process() method:
     - the output can be anything
 
 
-    --------------------+----------------------------------------------------------------------------------------
-    Container's method  | Analyzer Type       Analyzer's method   method's input     method's output
-    --------------------+----------------------------------------------------------------------------------------
-    indexby()           | AnalyzerIndexBy     indexby()           a data object      the key for the dictionary
-    map()               | AnalyzerMap         map()               a data object      new data object
-    filter()            | AnalyzerFilter      filter()            a data object      True/False
-    reduce()            | AnalyzerReduce      reduce()            a data object      new aggregated value
-    transform()         | AnalyzerTransform   transform()         all data objects   new list of data object
-    process()           | AnalyzerProcess     process()           all data objects   anything
-    --------------------+----------------------------------------------------------------------------------------
+    --------------------+--------------------------------------------------------------------------------------------------------
+    Container's method  | Analyzer Type       Analyzer's method   method's inputs                    method's output
+    --------------------+--------------------------------------------------------------------------------------------------------
+    indexby()           | AnalyzerIndexBy     indexby()           a data object                      the key for the dictionary
+    map()               | AnalyzerMap         map()               a data object                      new data object
+    filter()            | AnalyzerFilter      filter()            a data object                      True/False
+    reduce()            | AnalyzerReduce      reduce()            accumulated value, a data object   new aggregated value
+    transform()         | AnalyzerTransform   transform()         all data objects                   new list of data object
+    process()           | AnalyzerProcess     process()           all data objects                   anything
+    --------------------+--------------------------------------------------------------------------------------------------------
 
 
 A few basic pre-made Analyzers have been implemented, ready to use. 
