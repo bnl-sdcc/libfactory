@@ -461,8 +461,8 @@ class StatusInfo(_Base, _AnalysisInterface, _GetRawBase):
                              or a function
         :rtype StatusInfo:
         """
-        self.log.debug('Starting with lambda %s' %analyzer)
-        new_data = self.__filter(analyzer)
+        self.log.debug('Starting with lambda %s' %lambdafilter)
+        new_data = self.__filter(lambdafilter)
         new_info = StatusInfo(new_data, timestamp=self.timestamp)
         return new_info
 
@@ -495,18 +495,18 @@ class StatusInfo(_Base, _AnalysisInterface, _GetRawBase):
         return new_info
 
     @catch_exception
-    def __reduce(self, reducelambda):
+    def __reduce(self, lambdareduce):
         """
         call to python reduce() function
         """
-        if isinstance(reducelambda, AnalyzerReduce):
-            initialvalue = reducelambda.initialvalue()
+        if isinstance(lambdareduce, AnalyzerReduce):
+            initialvalue = lambdareduce.initialvalue()
             if initialvalue is not None:
-                return reduce(reducelambda.reduce, self.data, initvalue)
+                return reduce(lambdareduce.reduce, self.data, initvalue)
             else:
-                return reduce(reducelambda.reduce, self.data)
+                return reduce(lambdareduce.reduce, self.data)
         else:
-            return reduce(reducelambda, self.data)
+            return reduce(lambdareduce, self.data)
         
     # -------------------------------------------------------------------------
 
