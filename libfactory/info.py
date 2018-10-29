@@ -473,9 +473,9 @@ class StatusInfo(_Base, _AnalysisInterface, _GetRawBase):
         call to python map() function
         """
         if isinstance(lambdafilter, AnalyzerFilter):
-            return map(lambdafilter.filter, self.data)
+            return filter(lambdafilter.filter, self.data)
         else:
-            return map(lambdafilter, self.data)
+            return filter(lambdafilter, self.data)
 
     # -------------------------------------------------------------------------
 
