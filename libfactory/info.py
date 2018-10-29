@@ -151,16 +151,16 @@ Implementation of a process() method:
     - the output can be anything
 
 
-    --------------------+--------------------------------------------------------------------------------------------------------
-    Container's method  | Analyzer Type       Analyzer's method   method's inputs                    method's output
-    --------------------+--------------------------------------------------------------------------------------------------------
-    indexby()           | AnalyzerIndexBy     indexby()           a data object                      the key for the dictionary
-    map()               | AnalyzerMap         map()               a data object                      new data object
-    filter()            | AnalyzerFilter      filter()            a data object                      True/False
-    reduce()            | AnalyzerReduce      reduce()            accumulated value, a data object   new aggregated value
-    transform()         | AnalyzerTransform   transform()         all data objects                   new list of data object
-    process()           | AnalyzerProcess     process()           all data objects                   anything
-    --------------------+--------------------------------------------------------------------------------------------------------
+    --------------------+----------------------------------------------------------------------------------------
+    Container's method  | Analyzer Type       Analyzer's method   method's inputs    method's output
+    --------------------+----------------------------------------------------------------------------------------
+    indexby()           | AnalyzerIndexBy     indexby()           a data object      the key for the dictionary
+    map()               | AnalyzerMap         map()               a data object      new data object
+    filter()            | AnalyzerFilter      filter()            a data object      True/False
+    reduce()            | AnalyzerReduce      reduce()            two data objects   new aggregated value
+    transform()         | AnalyzerTransform   transform()         all data objects   new list of data object
+    process()           | AnalyzerProcess     process()           all data objects   anything
+    --------------------+----------------------------------------------------------------------------------------
 
 
 A few basic pre-made Analyzers have been implemented, ready to use. 
@@ -424,77 +424,90 @@ class StatusInfo(_Base, _AnalysisInterface, _GetRawBase):
     # -------------------------------------------------------------------------
 
     @validate_call
-    def map(self, analyzer):
+    def map(self, lambdamap):
         """
         modifies each item in self.data according to rules
         in analyzer
-        :param analyzer: an instance of AnalyzerMap-type class 
-                         implementing method map()
+        :param lambdamap: an instance of AnalyzerMap-type class 
+                          implementing method map()
+                          or a function
         :rtype StatusInfo:
         """
-        self.log.debug('Starting with analyzer %s' %analyzer)
-        new_data = self.__map(analyzer)
+        self.log.debug('Starting with lambda %s' %lambdamap)
+        new_data = self.__map(lambdamap)
         new_info = StatusInfo(new_data, timestamp=self.timestamp)
         return new_info
 
 
     @catch_exception
-    def __map(self, analyzer):
-        new_data = []
-        for item in self.data:
-            new_item = analyzer.map(item)
-            new_data.append(new_item)
-        return new_data
-
+    def __map(self, lambdamap):
+        """
+        call to python map() function
+        """
+        if isinstance(lambdamap, AnalyzerMap):
+            return map(lambdamap.map, self.data)
+        else:
+            return map(lambdamap, self.data)
 
     # -------------------------------------------------------------------------
 
     @validate_call
-    def filter(self, analyzer):
+    def filter(self, lambdafilter):
         """
         eliminates the items in self.data that do not pass
         the filter implemented in analyzer
-        :param analyzer: an instance of AnalyzerFilter-type class 
-                         implementing method filter()
+        :param lambdafilter: an instance of AnalyzerFilter-type class 
+                             implementing method filter()
+                             or a function
         :rtype StatusInfo:
         """
-        self.log.debug('Starting with analyzer %s' %analyzer)
+        self.log.debug('Starting with lambda %s' %analyzer)
         new_data = self.__filter(analyzer)
         new_info = StatusInfo(new_data, timestamp=self.timestamp)
         return new_info
 
 
     @catch_exception
-    def __filter(self, analyzer):
-        new_data = []
-        for item in self.data:
-            if analyzer.filter(item):
-                new_data.append(item)
-        return new_data
+    def __filter(self, lambdafilter):
+        """
+        call to python map() function
+        """
+        if isinstance(lambdafilter, AnalyzerFilter):
+            return map(lambdafilter.filter, self.data)
+        else:
+            return map(lambdafilter, self.data)
 
     # -------------------------------------------------------------------------
 
     @validate_call
-    def reduce(self, analyzer):
+    def reduce(self, lambdareduce):
         """
         process the entire self.data at the raw level and accumulate values
-        :param analyzer: an instance of AnalyzerReduce-type class 
-                         implementing method reduce()
+        :param lambdareduce: an instance of AnalyzerReduce-type class 
+                             implementing method reduce()
+                             or a function
         :rtype StatusInfo: 
         """
-        self.log.debug('Starting with analyzer %s' %analyzer)
-        new_data = self.__reduce(analyzer)
+        self.log.debug('Starting with lambda %s' %lambdareduce)
+        new_data = self.__reduce(lambdareduce)
         new_info = _NonMutableStatusInfo(new_data, 
                               timestamp=self.timestamp)
         return new_info
 
     @catch_exception
-    def __reduce(self, analyzer):
-        value = analyzer.init_value
-        for item in self.data:
-            value = analyzer.reduce(value, item) 
-        return value
-
+    def __reduce(self, reducelambda):
+        """
+        call to python reduce() function
+        """
+        if isinstance(reducelambda, AnalyzerReduce):
+            initialvalue = reducelambda.initialvalue()
+            if initialvalue is not None:
+                return reduce(reducelambda.reduce, self.data, initvalue)
+            else:
+                return reduce(reducelambda.reduce, self.data)
+        else:
+            return reduce(reducelambda, self.data)
+        
     # -------------------------------------------------------------------------
 
     @validate_call
@@ -657,6 +670,10 @@ class AnalyzerReduce(Analyzer):
     analyzertype = "reduce"
     def __init__(self, init_value=None):
         self.init_value = init_value
+
+    def initialvalue(self):
+        return self.init_value
+
     def reduce(self):
         """
         Implementation of a reduce() method:
@@ -769,11 +786,14 @@ class TotalRunningTimeFromRunningJobs(AnalyzerReduce):
         self.now = int(time.time())
         super(TotalRunningTimeFromRunningJobs, self).__init__(0)
 
-    def reduce(self, value, job):
-        running = self.now - int(job['enteredcurrentstatus'])
-        if value:
-            running += value
-        return running
+    def reduce(self, value1, value2):
+        if isinstance(value1, int):
+            return value1 + self._get(value2)
+        else:
+            return self._get(value1) + self._get(value2)
+
+    def _get(self, job):
+            return self.now - int(job['enteredcurrentstatus'])
 
 
 class TotalRunningTimeFromRunningAndFinishedJobs(AnalyzerReduce):
@@ -782,7 +802,14 @@ class TotalRunningTimeFromRunningAndFinishedJobs(AnalyzerReduce):
         self.now = int(time.time())
         super(TotalRunningTimeFromRunningAndFinishedJobs, self).__init__(0)
 
-    def reduce(self, value, job):
+    def reduce(self, value1, value2):
+
+        if isinstance(value1, int):
+            return value1 + self._get(value2)
+        else:
+            return self._get(value1) + self._get(value2)
+
+    def _get(self, job):
         if job['jobstatus'] == 2:
             running = self.now - int(job['enteredcurrentstatus'])
         elif job['jobstatus'] == 3 or \
@@ -796,9 +823,6 @@ class TotalRunningTimeFromRunningAndFinishedJobs(AnalyzerReduce):
                 running = 0
         else:
             running = 0
-
-        if value:
-            running += value
         return running
 
 
