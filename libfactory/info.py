@@ -502,7 +502,7 @@ class StatusInfo(_Base, _AnalysisInterface, _GetRawBase):
         if isinstance(lambdareduce, AnalyzerReduce):
             initialvalue = lambdareduce.initialvalue()
             if initialvalue is not None:
-                return reduce(lambdareduce.reduce, self.data, initvalue)
+                return reduce(lambdareduce.reduce, self.data, initialvalue)
             else:
                 return reduce(lambdareduce.reduce, self.data)
         else:
