@@ -628,7 +628,7 @@ if __name__ == '__main__':
     verbose = 0
     submitlist = "10,20,0,0,0,10,0,0"
     completefactor = .10
-    usage = """Usage: Agis.py [OPTIONS]  
+    usage = """Usage: queue.py [OPTIONS]  
     OPTIONS: 
         -h --help                   Print this message
         -d --debug                  Debug messages
