@@ -145,7 +145,7 @@ def _clean_cache(cache_d, now, cachingtime):
 
 
 # =============================================================================
-#              C O L L E C T O R   &   S C H E D D 
+#               C O L L E C T O R   &   S C H E D D 
 # =============================================================================
 
 
@@ -835,7 +835,55 @@ class JobSubmissionDescription(object):
 
 
 # =============================================================================
-#   Exceptions
+#               M A T C H M A K I N G
+# =============================================================================
+
+# FIXME: find better name
+def match(target_classad, requirement_str):
+    """
+    checks if a single target satifies a given requirement.
+    :param classad target_classad:
+    :param str requirement_str:
+    :return bool:
+    """
+    requirement_classad = classad.ClassAd()
+    requirement_classad['Requirements'] = classad.ExprTree(requirement_str)
+    return target_classad.matches(requirement_classad)
+
+
+# FIXME: find better name
+def match_bulk(target_classad, requirement_l):
+    """
+    checks if a single target satifies a given list of requirements.
+    :param classad target_classad:
+    :param list of str requirement_l:
+    :return bool:
+    """
+    requirement_str = ' && '.join(requirement_l)
+    return match(target_classad, requirement_str)
+
+
+# FIXME: find better name
+def match_each(target_classad, requirement_l):
+    """
+    checks if a single target satifies a given list of requirements.
+    The output is a list of requirements that were not satified.
+    :param classad target_classad:
+    :param list of str requirement_l:
+    :return list:
+    """
+    no_match = []
+    for requirement in requirement_l:
+        if not  match(target_classad, requirement):
+            no_match.append(requirement)
+    return no_match
+
+
+
+
+
+# =============================================================================
+#               E X C E P T I O N S
 # =============================================================================
 
 class CollectorNotReachable(Exception):
