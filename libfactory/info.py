@@ -273,7 +273,7 @@ data={data}, timestamp={timestamp}'
         else:
             key = key_l[0]
             if key not in self.data.keys():
-                raise MissingKey(key)
+                raise MissingKeyException(key)
             data = self.data[key]
             return data.get(*key_l[1:])
 
@@ -300,7 +300,7 @@ class _BaseDict(_Base):
         :rtype StatusInfo: 
         """
         if key not in self.data.keys():
-            raise MissingKey(key)
+            raise MissingKeyException(key)
         return self.data[key]
 
 # extra get methods
@@ -877,7 +877,7 @@ class IncorrectAnalyzer(Exception):
         return repr(self.value)
 
 
-class MissingKey(Exception):
+class MissingKeyException(Exception):
     def __init__(self, key):
         self.value = "Key %s is not in the data dictionary" %key
     def __str__(self):

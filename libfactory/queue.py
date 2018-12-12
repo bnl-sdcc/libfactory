@@ -24,7 +24,7 @@ class QTreeNode(threading.Thread):
     '''
     STATES = ['idle','running','complete']
         
-    def submit(self, n):
+    def enqueue(self, n):
         raise NotImplementedException()
 
     def rebalance(self):
@@ -97,7 +97,7 @@ class LBQueue(QTreeNode):
         self.parent = None
         
     
-    def submit(self, n):
+    def enqueue(self, n):
         '''
         
         '''
@@ -119,7 +119,7 @@ class LBQueue(QTreeNode):
                         tosub = 1
                 for ch in openchildren:
                     self.log.debug("Submitting %s to %s" % (tosub, ch.label))
-                    ch.submit(tosub)
+                    ch.enqueue(tosub)
             else:
                 if self.isroot:
                     self.log.info("[%s] Submitted to when full. Unable to handle more jobs")
@@ -150,7 +150,7 @@ class LBQueue(QTreeNode):
             overflow += ch.rebalance()
         self.log.debug("[%s] %d overflow" % (self.label, overflow) ) 
         if overflow > 0 and not self.isFull():
-            self.submit(overflow)
+            self.enqueue(overflow)
             overflow = 0        
         return overflow
 
@@ -183,7 +183,7 @@ class OFQueue(QTreeNode):
         self.parent = None
 
 
-    def submit(self, n):
+    def enqueue(self, n):
         if n == 0:
             self.log.info("Submit 0. Doing nothing.")
         if n > 0:
@@ -196,7 +196,7 @@ class OFQueue(QTreeNode):
                 for ch in self.children:
                     if not ch.isFull():
                         self.log.debug("Submitting %s to %s" % (n, ch.section))
-                        ch.submit(n)
+                        ch.enqueue(n)
             else:
                 self.log.error("[%s] Submitted to when full. Always call isFull() before submitting." % self.label) 
         elif n < 0:
@@ -212,7 +212,7 @@ class OFQueue(QTreeNode):
         for ch in self.children:
             overflow += ch.rebalance()
         if overflow > 0 and not self.isFull():
-            self.submit(overflow)
+            self.enqueue(overflow)
             overflow = 0        
         self.log.debug("[%s] %d overflow" % (self.label, overflow) ) 
         return overflow
@@ -254,7 +254,7 @@ class SubmitQueue(QTreeNode):
         self.children = []
 
     
-    def submit(self, n):
+    def enqueue(self, n):
         if not self.isFull():
             self.batchplugin.submit(n, 
                                     label=self.section, 
@@ -421,7 +421,7 @@ class MockBatchPlugin(object):
     '''
     Programmable mock batch plugin so behavior can be repeatable for testing.    
     
-    Jobs sumbitted to labels via submit(n, label) go into IDLE state with that label.
+    Jobs sumbitted to labels via enqueue(n, label) go into IDLE state with that label.
     When .process() is called, one cycle is run  on all labelled jobs. 
    
     
@@ -602,7 +602,7 @@ mock=max30
         thiscycle = mbp.cycles +1
         print("cycle: %d do submission." % thiscycle)
         for qo in rl:
-            qo.submit(subnumber)
+            qo.enqueue(subnumber)
         print(qm.getPrintTree())
         
         print("cycle: %d  finish jobs." % thiscycle)
