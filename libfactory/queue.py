@@ -14,7 +14,7 @@ import StringIO
 
 from pprint import pprint
 
-from IPython.lib.editorhooks import idle
+# from IPython.lib.editorhooks import idle
 from libfactory.htcondorlib import HTCondorSchedd, HTCondorPool
 from libfactory.info import StatusInfo, IndexByKey, AnalyzerFilter, AnalyzerMap, Count
 
@@ -901,6 +901,7 @@ def test_isfull():
 if __name__ == '__main__':
         
     fconfig_file = None
+    runtest = None
     debug = 0
     verbose = 0
     submitlist = "10,20,0,0,0,10,0,0"
@@ -969,6 +970,8 @@ if __name__ == '__main__':
     elif runtest == 'isfull':
         ts = TargetStatus()
         pprint(ts.get_isfull())
+    else:
+        print(usage)
 
 
 
