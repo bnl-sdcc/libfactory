@@ -296,6 +296,20 @@ class _HTCondorCollector(object):
         self.lock.release()
         return out
 
+    # --------------------------------------------------------------------------
+
+    def get_startd_classads(self, constraint_str=""):
+        """
+        returns all Startd classad advertised to this Collector
+        """
+        self.log.debug('Starting')
+        if constraint_str:
+            out = self.htcondor_collector.query(htcondor.AdTypes.Startd, constraint_str)
+        else:
+            out = self.htcondor_collector.query(htcondor.AdTypes.Startd)
+        self.log.debug('Leaving, with output = %s' %s)
+
+
 
 class HTCondorCollector(object):
     """
