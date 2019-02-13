@@ -923,7 +923,7 @@ if __name__ == '__main__':
     argv = sys.argv[1:]
     try:
         opts, args = getopt.getopt(argv, 
-                                   "hdvtc:s:C:t:", 
+                                   "hdvc:s:C:t:", 
                                    ["help", 
                                     "debug", 
                                     "verbose",
