@@ -18,12 +18,12 @@ from pprint import pprint
 from libfactory.htcondorlib import HTCondorSchedd, HTCondorPool
 from libfactory.info import StatusInfo, IndexByKey, AnalyzerFilter, AnalyzerMap, Count
 
-
-
 class NotImplementedException(Exception):
     pass
 
-class QTreeNode(threading.Thread):
+
+
+class QTreeNode(object):
     '''
     Common code for any Tree Node. 
     '''
