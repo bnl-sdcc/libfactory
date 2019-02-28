@@ -158,14 +158,7 @@ class LBQueue(QTreeNode):
             self.enqueue(overflow)
             overflow = 0        
         return overflow
-
-        
-
-    def run(self):
-        '''
-        Will be used if this is a root node. 
-        '''
-    
+   
 
 class OFQueue(QTreeNode):
     '''
@@ -244,26 +237,29 @@ class SubmitQueue(QTreeNode):
         self.parent = None
         self.isroot = self.config.getboolean(section, 'isroot')
         self.maxtransfer = self.config.getint(section, 'maxtransfer')
-        self.batchpluginname = config.get(section, 'batchplugin')
-        bp = getattr(sys.modules[__name__], self.batchpluginname)
-        bpo = bp(config, section)
-        self.log.debug("Set batchplugin to %s" % bpo)
-        self.batchplugin = bpo
         try:
-            self.mock = config.get(section, 'mock')
+            self.batchpluginname = config.get(section, 'batchplugin')
+            if self.batchpluginname.lower() == 'none':
+                self.batchplugin = None
+            else:
+                bp = getattr(sys.modules[__name__], self.batchpluginname)
+                bpo = bp(config, section)
+                self.log.debug("Set batchplugin to %s" % bpo)
+                self.batchplugin = bpo
+                self.mock = config.get(section, 'mock')
         except:
             self.mock = None
         self.minfullpending = config.getint(section, 'minfullpending')
         
         self.childlist = []
         self.children = []
-
+        self.log.debug("SubmitQueue initialized. ")
     
     def enqueue(self, n):
         if not self.isFull():
-            self.batchplugin.submit(n, 
-                                    label=self.section, 
-                                    mock=self.mock)
+            self.batchplugin.submit(n) 
+                                    # label=self.section, 
+                                    # mock=self.mock)
         else:
             self.log.error("[%s] Submitted to when full. Always call isFull() before submitting." % self.label) 
        
