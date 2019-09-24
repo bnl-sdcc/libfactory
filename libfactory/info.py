@@ -637,7 +637,7 @@ class Analyzer(object):
 
 class AnalyzerIndexBy(Analyzer):
     analyzertype = "indexby"
-    def indexby(self):
+    def indexby(self, item):
         """
         Implementation of an indexby() method:
             - the input is an individual item from the list of data objects being analyzed
@@ -648,7 +648,7 @@ class AnalyzerIndexBy(Analyzer):
 
 class AnalyzerFilter(Analyzer):
     analyzertype = "filter"
-    def filter(self):
+    def filter(self, item):
         """
         Implementation of a filter() method:
             - the input is an individual item from the list of data objects being analyzed
@@ -659,7 +659,7 @@ class AnalyzerFilter(Analyzer):
 
 class AnalyzerMap(Analyzer):
     analyzertype = "map"
-    def map(self):
+    def map(self, item):
         """
         Implementation of a map() method:
             - the input is an individual item from the list of data objects being analyzed
@@ -676,7 +676,7 @@ class AnalyzerReduce(Analyzer):
     def initialvalue(self):
         return self.init_value
 
-    def reduce(self):
+    def reduce(self, item):
         """
         Implementation of a reduce() method:
             - the input is an individual item from the list of data objects being analyzed
@@ -688,7 +688,7 @@ class AnalyzerReduce(Analyzer):
 
 class AnalyzerTransform(Analyzer):
     analyzertype = "transform"
-    def transform(self):
+    def transform(self, item_l):
         """
         Implementation of a transform() method:
             - the input is the entire list of data objects
@@ -699,7 +699,7 @@ class AnalyzerTransform(Analyzer):
 
 class AnalyzerProcess(Analyzer):
     analyzertype = "process"
-    def process(self):
+    def process(self, item_l):
         """
         Implementation of a process() method:
             - the input is the entire list of data objects
